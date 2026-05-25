@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #1E1E1E; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: 0; display: block; }
+    #loading {
+      position: fixed; inset: 0; background: #1E1E1E;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; color: #E6E6E6;
+      font-family: -apple-system, sans-serif; font-size: 13px;
+      transition: opacity 0.4s;
+    }
+    .spinner {
+      width: 28px; height: 28px; border: 2px solid #333;
+      border-top-color: #18A0FB; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Loading G→Shader…</span>
+  </div>
+
+  <!--
+    Replace the src below with your deployed URL, e.g.:
+      https://your-app.vercel.app
+      https://your-custom-domain.com
+    Or keep localhost:3000 if running locally.
+  -->
+  <iframe
+    id="app"
+    src="http://localhost:3000"
+    allow="camera; microphone"
+    onload="document.getElementById('loading').style.opacity='0'; setTimeout(() => document.getElementById('loading').remove(), 400)"
+  ></iframe>
+
+  <script>
+    /**
+     * Message relay — bridges Figma sandbox (code.js) ↔ iframe (web app).
+     *
+     * Figma sandbox  →  this window  →  iframe
+     *   iframe        →  this window  →  Figma sandbox
+     */
+    window.addEventListener('message', function(e) {
+      var iframe = document.getElementById('app');
+      if (!iframe) return;
+
+      // Figma sandbox → iframe
+      if (e.source === window.parent && e.data && e.data.pluginMessage) {
+        iframe.contentWindow.postMessage(e.data, '*');
+        return;
+      }
+
+      // iframe → Figma sandbox
+      if (e.source === iframe.contentWindow && e.data && e.data.pluginMessage) {
+        window.parent.postMessage(e.data, '*');
+        return;
+      }
+    });
+  </script>
+</body>
+</html>

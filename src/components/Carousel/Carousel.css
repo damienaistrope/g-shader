@@ -1,0 +1,130 @@
+.md-carousel {
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.md-carousel__title {
+  font-family: var(--md-sys-typescale-title-large-font);
+  font-size: var(--md-sys-typescale-title-large-size);
+  color: var(--md-sys-color-on-surface);
+  margin-left: 4px;
+}
+
+.md-carousel__outer {
+  position: relative;
+  width: 100%;
+}
+
+.md-carousel__track {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 4px;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar IE/Edge */
+}
+
+.md-carousel__track::-webkit-scrollbar {
+  display: none; /* Hide scrollbar Chrome/Safari */
+}
+
+.md-carousel-item {
+  scroll-snap-align: start;
+  border-radius: 28px; /* M3 Carousel specific rounding */
+  overflow: hidden;
+  position: relative;
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  background-color: var(--md-sys-color-surface-container);
+  flex-shrink: 0;
+}
+
+.md-carousel--multi-browse .md-carousel-item {
+  width: 180px;
+  height: 240px;
+}
+
+.md-carousel--multi-browse .md-carousel-item:first-child {
+  width: 280px; /* Hero focus in multi-browse */
+}
+
+.md-carousel--hero .md-carousel-item {
+  width: 100%;
+  aspect-ratio: 16/9;
+}
+
+.md-carousel-item__container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.md-carousel-item__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.md-carousel-item__overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.md-carousel-item__title {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.md-carousel-item__subtitle {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.md-carousel__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--md-sys-elevation-2);
+  cursor: pointer;
+  z-index: 10;
+  transition: all 200ms;
+}
+
+.md-carousel__nav:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-3);
+}
+
+.md-carousel__nav--left {
+  left: -24px;
+}
+
+.md-carousel__nav--right {
+  right: -24px;
+}
+
+@media (max-width: 1024px) {
+    .md-carousel__nav {
+        display: none;
+    }
+}
