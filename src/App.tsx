@@ -616,7 +616,7 @@ export default function App() {
     setBackdropScale(comb.backdropScale ?? 100);
     setIsBackdropVisible(comb.isBackdropVisible ?? true);
     setCanvasBgMode(comb.canvasBgMode || 'dark');
-    setGlobalColorLibrary(comb.globalColorLibrary || 'default-purple');
+    setGlobalColorLibrary(comb.globalColorLibrary || 'baseline-blue');
     setActiveState(comb.activeState || 2);
     setSelectedFigmaFileId(comb.figmaFileId || 'fig-1');
     setActiveCombinationId(comb.id);
@@ -2126,14 +2126,14 @@ figma.ui.onmessage = (msg) => {
 
   // Resolve colors dynamically by component or defaults
   const getComponentColors = (c: ComponentInstance, mode: 'light' | 'dark') => {
-    const libKey = c.colorLibrary || globalColorLibrary || 'default-purple';
-    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+    const libKey = c.colorLibrary || globalColorLibrary || 'baseline-blue';
+    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
     return lib.colors[mode][c.containerType];
   };
 
   const getM3SpecificStyles = (comp: ComponentInstance, mode: 'light' | 'dark') => {
-    const libKey = comp.colorLibrary || globalColorLibrary || 'default-purple';
-    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+    const libKey = comp.colorLibrary || globalColorLibrary || 'baseline-blue';
+    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
     const libColors = lib.colors[mode];
     
     let bg = libColors[comp.containerType]?.bg || '#ffffff';
@@ -3218,7 +3218,7 @@ figma.ui.onmessage = (msg) => {
                         {/* Predefined Dynamic Colors and Custom Swatch together */}
                         {(() => {
                           const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['default-purple'];
+                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['baseline-blue'];
                           const swatches = [
                             { hex: lib.colors.light.surface.bg, label: 'Theme Surface (Light)' },
                             { hex: lib.colors.dark.surface.bg, label: 'Theme Surface (Dark)' }
@@ -3249,7 +3249,7 @@ figma.ui.onmessage = (msg) => {
                       {/* Custom color picker swatch with rainbow background prior to selection, solid + checkmark when active */}
                       {(() => {
                         const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
                         const darkHex = lib.colors.dark.surface.bg;
                         const lightHex = lib.colors.light.surface.bg;
                         
@@ -3567,8 +3567,8 @@ figma.ui.onmessage = (msg) => {
                   const compShadow = themeColors.shadow;
                   const hasBaseShaderBg = themeColors.hasBaseShaderBg;
 
-                  const libKey = comp.colorLibrary || globalColorLibrary || 'default-purple';
-                  const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+                  const libKey = comp.colorLibrary || globalColorLibrary || 'baseline-blue';
+                  const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
                   const libColors = lib.colors[canvasBgMode];
 
                   const compState = comp.activeState !== undefined ? comp.activeState : 0;
@@ -3821,36 +3821,23 @@ figma.ui.onmessage = (msg) => {
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
+                      {/* SPECIMEN: BUTTON */}
                       {comp.type === 'button' && (
-                        <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
-                          <M3Button 
-                            variant={(comp.variant as any) || 'filled'}
-                            size={comp.sizePreset === 'xsmall' ? 'xs' : comp.sizePreset === 'small' ? 's' : comp.sizePreset === 'medium' ? 'm' : comp.sizePreset === 'large' ? 'l' : 'xl'}
-                            onClick={handleButtonClick}
-                            icon={comp.configShowIcon ? <span className="material-symbols-outlined select-none" style={{ fontSize: 'inherit' }}>{localIcon}</span> : undefined}
-                            className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{ 
-                              color: compTextColor,
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
-                              border: compState !== 0 ? 'none' : compBorderColor !== 'transparent' ? `1px solid ${compBorderColor}` : undefined,
-                              boxShadow: compState !== 0 ? 'none' : compShadow,
-                              borderRadius: 'inherit'
-                            }}
-                          >
-                            <span 
-                              contentEditable
-                              suppressContentEditableWarning
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                              className="cursor-text hover:bg-white/5 px-1 rounded outline-none transition-colors inline-block"
-                            >
-                              {comp.text}
-                            </span>
-                          </M3Button>
-                        </div>
+                        <M3Button
+                          variant={(comp.variant as any) || 'filled'}
+                          size={comp.sizePreset === 'xsmall' ? 'xs' : comp.sizePreset === 'small' ? 's' : comp.sizePreset === 'medium' ? 'm' : comp.sizePreset === 'large' ? 'l' : 'xl'}
+                          onClick={handleButtonClick}
+                          icon={comp.configShowIcon ? localIcon : undefined}
+                          className="pointer-events-auto"
+                        >
+                          <span
+                            contentEditable suppressContentEditableWarning
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                            className="cursor-text outline-none inline-block"
+                          >{comp.text}</span>
+                        </M3Button>
                       )}
 
                       {/* SPECIMEN: CARD */}
@@ -4056,66 +4043,27 @@ figma.ui.onmessage = (msg) => {
 
                       {/* SPECIMEN: CHIP */}
                       {comp.type === 'chip' && (
-                        <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
-                          <M3Chip 
-                            label=""
-                            variant={(comp.variant as any) || 'assist'}
-                            icon={comp.configShowIcon ? localIcon : undefined}
-                            selected={comp.selectedState || compState === 2}
-                            onRemove={comp.variant === 'input' ? (() => {}) : undefined}
-                            className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
-                              border: compState !== 0 ? 'none' : compBorderColor !== 'transparent' ? `1px solid ${compBorderColor}` : undefined,
-                              boxShadow: compState !== 0 ? 'none' : undefined,
-                              borderRadius: 'inherit',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: compTextColor
-                            }}
-                          >
-                            <span 
-                              contentEditable
-                              suppressContentEditableWarning
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                              className="text-[12px] font-sans font-medium tracking-[0.0125em] hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors flex items-center justify-center text-center select-text leading-none"
-                              style={{ color: compTextColor }}
-                            >
-                              {comp.text}
-                            </span>
-                          </M3Chip>
-                        </div>
+                        <M3Chip
+                          label={comp.text || 'Interactive'}
+                          variant={(comp.variant as any) || 'assist'}
+                          icon={comp.configShowIcon ? localIcon : undefined}
+                          selected={comp.selectedState || compState === 2}
+                          onRemove={comp.variant === 'input' ? (() => {}) : undefined}
+                          onClick={handleButtonClick}
+                          className="pointer-events-auto"
+                        />
                       )}
 
                       {/* SPECIMEN: FAB  */}
                       {comp.type === 'fab' && (
-                        <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
-                          <M3FAB 
-                            icon={localIcon}
-                            label={comp.sizePreset === 'xlarge' ? (comp.text || 'Extended FAB') : undefined}
-                            variant={(comp.variant as any) || 'primary'}
-                            size={comp.sizePreset === 'xlarge' ? 'extended' : comp.sizePreset === 'small' || comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'large' ? 'large' : 'medium'}
-                            onClick={handleButtonClick}
-                            className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
-                              color: compTextColor,
-                              border: compState !== 0 ? 'none' : undefined,
-                              boxShadow: compState !== 0 ? 'none' : undefined,
-                              borderRadius: 'inherit',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          />
-                        </div>
+                        <M3FAB
+                          icon={localIcon}
+                          label={comp.sizePreset === 'xlarge' ? (comp.text || 'Extended FAB') : undefined}
+                          variant={(comp.variant as any) || 'primary'}
+                          size={comp.sizePreset === 'xlarge' ? 'extended' : comp.sizePreset === 'small' || comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'large' ? 'large' : 'medium'}
+                          onClick={handleButtonClick}
+                          className="pointer-events-auto"
+                        />
                       )}
 
                       {/* SPECIMEN: DIALOG */}
