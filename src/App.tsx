@@ -4030,25 +4030,36 @@ figma.ui.onmessage = (msg) => {
                               )}
                             </>
                           ) : (
-                            /* Horizontal: media on right, content on left */
+                            /* Horizontal: avatar + header/subhead on left, image on right */
                             <>
                               <M3CardHeader
-                                header={comp.configShowTitle ? comp.title : undefined}
-                                subhead={comp.configShowSubtitle ? comp.subtitle : undefined}
+                                avatar={comp.configShowIcon ? (
+                                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
+                                ) : undefined}
+                                header={comp.configShowTitle ? (
+                                  <span contentEditable suppressContentEditableWarning
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
+                                    onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                    style={{ outline:'none', cursor:'text', display:'block' }}>{comp.title}</span>
+                                ) : undefined}
+                                subhead={comp.configShowSubtitle ? (
+                                  <span contentEditable suppressContentEditableWarning
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
+                                    onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                    style={{ outline:'none', cursor:'text', display:'block' }}>{comp.subtitle}</span>
+                                ) : undefined}
                               />
-                              {comp.configShowDescription && (
-                                <M3CardContent>{comp.text}</M3CardContent>
-                              )}
                               <M3CardMedia aspectRatio="custom"
                                 src={comp.iconImage || undefined}
-                                style={{ width:'120px', flexShrink:0, minHeight:'80px' } as React.CSSProperties}>
+                                style={{ width:'120px', flexShrink:0 } as React.CSSProperties}>
                                 {!comp.iconImage && (
                                   <span className="material-symbols-outlined" style={{ fontSize:'24px', color:'var(--md-sys-color-outline)', opacity:0.4 }}>image</span>
                                 )}
                               </M3CardMedia>
                             </>
                           )}
-                        </M3Card>
                       )}
 
                       {/* SPECIMEN: CHIP */}
@@ -4471,6 +4482,31 @@ figma.ui.onmessage = (msg) => {
             </div>
           )}
 
+            {/* GLOBAL ENERGY STATE STRIP — sits just above the bottom console */}
+            <div className="absolute bottom-20 left-0 right-0 z-40 px-8 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-1 pointer-events-auto bg-[#1A1A1A]/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-neutral-800/60 shadow-xl">
+                <span className="text-[8.5px] font-sans uppercase text-neutral-600 font-bold tracking-wider mr-1.5">Energy</span>
+                {OFFICIAL_STATES.map(state => {
+                  const compState = selectedComponentId
+                    ? (canvasComponents.find(c => c.id === selectedComponentId)?.activeState ?? activeState)
+                    : activeState;
+                  const isActive = compState === state.id;
+                  return (
+                    <button key={state.id}
+                      onClick={() => handleStateClick(state.id)}
+                      title={state.description}
+                      className={`px-2.5 py-1 text-[8.5px] font-bold rounded-full cursor-pointer transition-all whitespace-nowrap border ${
+                        isActive
+                          ? 'bg-[#18A0FB] text-white border-[#18A0FB] shadow'
+                          : 'text-neutral-500 border-transparent hover:text-neutral-200 hover:border-neutral-700'
+                      }`}>
+                      {state.label.split(' ')[0]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* =========================================================================================
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
                 ========================================================================================= */}
@@ -4491,9 +4527,9 @@ figma.ui.onmessage = (msg) => {
 
                 {/* 2. Speed slider */}
                 <div className="flex flex-col justify-between h-12 items-start min-w-[60px] max-w-[200px] flex-1 @container">
-                  <div className="flex items-center justify-between w-full gap-1">
+                  <div className="flex items-center w-full gap-1 @[80px]:justify-between justify-center">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none @[80px]:block hidden">Speed</span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none ml-auto">{intensity.toFixed(2)}×</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{intensity.toFixed(2)}×</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
                     <input type="range" min="0.10" max="1.50" step="0.05" value={intensity}
@@ -4546,9 +4582,9 @@ figma.ui.onmessage = (msg) => {
 
                 {/* 6. Duration slider */}
                 <div className={`flex flex-col justify-between h-12 items-start min-w-[60px] max-w-[200px] flex-1 @container transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <div className="flex items-center justify-between w-full gap-1">
+                  <div className="flex items-center w-full gap-1 @[80px]:justify-between justify-center">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none @[80px]:block hidden">Duration</span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none ml-auto">{exportDuration}s</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{exportDuration}s</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
                     <input type="range" min="1" max="20" step="1" value={exportDuration}
@@ -4610,37 +4646,32 @@ figma.ui.onmessage = (msg) => {
 
           {/* STEP 1: Area Selection Mode Panel */}
           {isAreaSelectionMode && recordingCountdown === null && !isRecording && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#222222] border-none shadow-2xl p-1.5 px-2.5 rounded-lg flex items-center gap-1.5 z-[90] text-neutral-100 font-sans">
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 z-[90]">
               <button
-                onClick={() => {
-                  setIsCropActive(false);
-                  setIsAreaSelectionMode(false);
-                }}
-                className="h-[28px] px-3.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[9.5px] font-bold uppercase transition select-none cursor-pointer border border-neutral-750/70"
+                onClick={() => { setIsCropActive(false); setIsAreaSelectionMode(false); }}
+                className="h-[28px] px-3.5 rounded-full bg-neutral-900/80 backdrop-blur-sm hover:bg-neutral-800 text-neutral-300 text-[9.5px] font-bold uppercase transition select-none cursor-pointer border border-neutral-700/50 shadow-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={startRecordingAfterCountdown}
-                className="h-[28px] px-4 rounded bg-[#18A0FB] hover:bg-[#158CDD] text-white text-[9.5px] font-bold uppercase tracking-wide transition flex items-center justify-center select-none cursor-pointer border-none shadow-md shadow-[#18A0FB]/10 font-sans"
+                className="h-[28px] px-4 rounded-full bg-[#18A0FB] hover:bg-[#158CDD] text-white text-[9.5px] font-bold uppercase tracking-wide transition select-none cursor-pointer border-none shadow-lg shadow-[#18A0FB]/30"
               >
                 Confirm
               </button>
             </div>
           )}
 
-          {/* STEP 2: Timer Countdown toast instead of full screen takeover */}
+          {/* STEP 2: Countdown toast — compact, non-intrusive */}
           {recordingCountdown !== null && (
-            <div className="absolute inset-0 z-[90] flex items-center justify-center pointer-events-none">
-              <div className="flex flex-col items-center gap-3 animate-pulse">
-                <div className={`w-28 h-28 rounded-full flex items-center justify-center shadow-2xl border-4 ${
-                  recordingCountdown === 3 ? 'bg-red-500/90 border-red-400' :
-                  recordingCountdown === 2 ? 'bg-orange-500/90 border-orange-400' :
-                  'bg-green-500/90 border-green-400'
-                }`}>
-                  <span className="text-white font-black text-6xl leading-none font-mono">{recordingCountdown}</span>
-                </div>
-                <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full">
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[90] pointer-events-none">
+              <div className={`flex items-center gap-2.5 px-4 py-2 rounded-full shadow-2xl animate-pulse ${
+                recordingCountdown === 3 ? 'bg-red-500 text-white' :
+                recordingCountdown === 2 ? 'bg-orange-500 text-white' :
+                'bg-green-500 text-white'
+              }`}>
+                <span className="font-black text-xl leading-none font-mono w-5 text-center">{recordingCountdown}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-90">
                   {recordingCountdown === 1 ? 'Go!' : 'Get ready...'}
                 </span>
               </div>
@@ -4966,23 +4997,57 @@ figma.ui.onmessage = (msg) => {
                 {/* DIMENSIONS */}
                 <div className="space-y-2 pb-3 border-b border-[#333]">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Dimensions</span>
-                  {(['width','height','borderRadius'] as const).map(field => (
+                  {/* Width */}
+                  {(['width','height'] as const).map(field => (
                     <div key={field} className="space-y-1">
                       <div className="flex justify-between items-center text-[9px] font-sans text-neutral-450">
-                        <span className="uppercase font-bold tracking-wider">{field === 'borderRadius' ? 'Radius' : field === 'width' ? 'W' : 'H'}</span>
+                        <span className="uppercase font-bold tracking-wider">{field === 'width' ? 'W' : 'H'}</span>
                         <span className="font-mono font-bold text-[#18A0FB]">{(activeComp as any)[field]}px</span>
                       </div>
                       <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
-                        <input type="range"
-                          min={field === 'borderRadius' ? 0 : field === 'height' ? 20 : 40}
-                          max={field === 'borderRadius' ? 100 : 800}
-                          step={field === 'borderRadius' ? 1 : 4}
+                        <input type="range" min={field === 'height' ? 20 : 40} max={800} step={4}
                           value={(activeComp as any)[field]}
                           onChange={(e) => updateActiveComponentField(field, Number(e.target.value))}
                           className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]" />
                       </div>
                     </div>
                   ))}
+                  {/* Radius — M3 shape scale steps */}
+                  {(() => {
+                    const M3_RADII = [
+                      { label: 'None', value: 0 },
+                      { label: 'XS', value: 4 },
+                      { label: 'S', value: 8 },
+                      { label: 'M', value: 12 },
+                      { label: 'L', value: 16 },
+                      { label: 'L+', value: 20 },
+                      { label: 'XL', value: 28 },
+                      { label: 'XL+', value: 32 },
+                      { label: 'XXL', value: 48 },
+                      { label: 'Full', value: 9999 },
+                    ];
+                    const curR = activeComp.borderRadius;
+                    const closest = M3_RADII.reduce((a, b) => Math.abs(b.value - curR) < Math.abs(a.value - curR) ? b : a);
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[9px] font-sans text-neutral-450">
+                          <span className="uppercase font-bold tracking-wider">Radius</span>
+                          <span className="font-mono font-bold text-[#18A0FB]">{curR >= 9999 ? 'Full' : `${curR}px`} · {closest.label}</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-1">
+                          {M3_RADII.map(r => (
+                            <button key={r.value}
+                              onClick={() => updateActiveComponentField('borderRadius', r.value)}
+                              className={`py-1 text-[8px] font-bold rounded cursor-pointer transition-all ${
+                                curR === r.value ? 'bg-[#18A0FB]/20 text-[#18A0FB] border border-[#18A0FB]/40' : 'bg-[#1E1E1E] text-neutral-500 hover:text-neutral-300 border border-transparent'
+                              }`}>
+                              {r.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* SHOW / HIDE TOGGLES */}
