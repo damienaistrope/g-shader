@@ -876,7 +876,7 @@ figma.ui.onmessage = function(msg) {
     } else if (type === 'card') {
       name = `❖ Card ${Math.floor(Math.random() * 90) + 10}`;
       width = 300;
-      height = 180;
+      height = 360;
       borderRadius = 16;
       text = "Continuous wave rendering is active.";
       title = "Card Title";
@@ -3761,7 +3761,7 @@ figma.ui.onmessage = function(msg) {
                     <div 
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
-                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
+                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 overflow-hidden ${
                         (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
@@ -3994,7 +3994,7 @@ figma.ui.onmessage = function(msg) {
                                     avatar={comp.configShowIcon ? (
                                       <div 
                                         className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/10 shadow-sm select-none relative overflow-hidden"
-                                        style={{ backgroundColor: comp.iconBgColor || 'rgba(0,0,0,0.15)' }}
+                                        style={{ backgroundColor: comp.iconBgColor || 'var(--md-sys-color-primary-container)' }}
                                       >
                                         {((comp.avatarType || (comp.iconImage ? 'image' : 'icon')) === 'image' && comp.iconImage) ? (
                                           <img referrerPolicy="no-referrer" src={comp.iconImage} className="w-full h-full object-cover" alt="Avatar" />
@@ -4003,7 +4003,7 @@ figma.ui.onmessage = function(msg) {
                                             {comp.avatarInitials || (comp.title ? comp.title.slice(0, 2).toUpperCase() : 'AV')}
                                           </span>
                                         ) : (
-                                          <span className="material-symbols-outlined text-[20px] leading-none text-white opacity-90">{localIcon}</span>
+                                          <span className="material-symbols-outlined text-[20px] leading-none" style={{ color: "var(--md-sys-color-on-primary-container)" }}>{localIcon}</span>
                                         )}
                                       </div>
                                     ) : undefined}
@@ -4014,8 +4014,8 @@ figma.ui.onmessage = function(msg) {
                                         onMouseDown={(e) => e.stopPropagation()}
                                         onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                        className={`${titleFont.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
-                                        style={{ color: compTextColor }}
+                                        className={`${titleFont.class} truncate cursor-text px-1 rounded outline-none transition-colors inline-block`} 
+                                        style={{ color: 'var(--md-sys-color-on-surface)' }}
                                       >
                                         {comp.title}
                                       </span>
@@ -4027,8 +4027,8 @@ figma.ui.onmessage = function(msg) {
                                         onMouseDown={(e) => e.stopPropagation()}
                                         onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                        className={`${M3_FONT_STYLES.bodySmall.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
-                                        style={{ color: compSubtextColor }}
+                                        className={`${M3_FONT_STYLES.bodySmall.class} truncate cursor-text px-1 rounded outline-none transition-colors inline-block`} 
+                                        style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
                                       >
                                         {comp.subtitle}
                                       </span>
@@ -4042,24 +4042,24 @@ figma.ui.onmessage = function(msg) {
                                 )}
                                 
                                 {/* Large Media Block in Vertical card */}
-                                <M3CardMedia className="h-32 bg-neutral-200/5 dark:bg-neutral-800/40 relative overflow-hidden flex items-center justify-center border-y border-neutral-800/10 dark:border-white/5">
-                                  <span className="material-symbols-outlined text-[28px] opacity-25 text-neutral-400">image</span>
+                                <M3CardMedia className="relative overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--md-sys-color-surface-container-high)', borderTop: '1px solid var(--md-sys-color-outline-variant)', borderBottom: '1px solid var(--md-sys-color-outline-variant)', height: '120px' }}>
+                                  <span className="material-symbols-outlined text-[28px]" style={{ color: 'var(--md-sys-color-outline)', opacity: 0.5 }}>image</span>
                                 </M3CardMedia>
  
                                 {comp.configShowDescription && (
                                   <M3CardContent className="flex-1 min-h-0 py-3.5 px-4 select-text">
-                                    <div className="text-[14px] font-bold font-sans mb-1" style={{ color: compTextColor }}>
+                                    <div className="text-[14px] font-bold font-sans mb-1" style={{ color: "var(--md-sys-color-on-surface)" }}>
                                       {comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Outlined'} Card
                                     </div>
-                                    <div className="text-[11px] font-sans mb-2.5" style={{ color: compSubtextColor }}>Material 3 • Today</div>
+                                    <div className="text-[11px] font-sans mb-2.5" style={{ color: "var(--md-sys-color-on-surface-variant)" }}>Material 3 • Today</div>
                                     <p 
                                       contentEditable
                                       suppressContentEditableWarning
                                       onMouseDown={(e) => e.stopPropagation()}
                                       onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                      className={`${descFont.class} ${comp.heightMode === 'auto' ? '' : 'line-clamp-3'} leading-relaxed hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors`} 
-                                      style={{ color: compTextColor }}
+                                      className={`${descFont.class} ${comp.heightMode === 'auto' ? '' : 'line-clamp-3'} leading-relaxed cursor-text px-1 rounded outline-none transition-colors`} 
+                                      style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
                                     >
                                       {comp.text}
                                     </p>
@@ -4100,7 +4100,7 @@ figma.ui.onmessage = function(msg) {
                                       {comp.configShowIcon && (
                                         <div 
                                           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/10 shadow-sm select-none relative overflow-hidden mb-1"
-                                          style={{ backgroundColor: comp.iconBgColor || 'rgba(0,0,0,0.15)' }}
+                                          style={{ backgroundColor: comp.iconBgColor || 'var(--md-sys-color-primary-container)' }}
                                         >
                                           {((comp.avatarType || (comp.iconImage ? 'image' : 'icon')) === 'image' && comp.iconImage) ? (
                                             <img referrerPolicy="no-referrer" src={comp.iconImage} className="w-full h-full object-cover" alt="Avatar" />
@@ -4109,7 +4109,7 @@ figma.ui.onmessage = function(msg) {
                                               {comp.avatarInitials || (comp.title ? comp.title.slice(0, 2).toUpperCase() : 'AV')}
                                             </span>
                                           ) : (
-                                            <span className="material-symbols-outlined text-[20px] leading-none text-white opacity-90">{localIcon}</span>
+                                            <span className="material-symbols-outlined text-[20px] leading-none" style={{ color: "var(--md-sys-color-on-primary-container)" }}>{localIcon}</span>
                                           )}
                                         </div>
                                       )}
