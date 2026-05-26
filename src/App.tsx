@@ -200,6 +200,21 @@ const M3_COLOR_LIBRARIES: Record<string, {
   name: string;
   colors: Record<'light' | 'dark', Record<'primary' | 'secondary' | 'surface', { bg: string; text: string; subtext: string; label: string }>>
 }> = {
+  'baseline-blue': {
+    name: 'Material Baseline Blue',
+    colors: {
+      light: {
+        primary: { bg: '#0061A4', text: '#FFFFFF', subtext: '#D1E4FF', label: 'Primary blue' },
+        secondary: { bg: '#D7E3F7', text: '#101C2B', subtext: '#3B4858', label: 'Secondary container' },
+        surface: { bg: '#F8FAFD', text: '#1A1C1E', subtext: '#44474E', label: 'Surface container' }
+      },
+      dark: {
+        primary: { bg: '#A4C9FE', text: '#003258', subtext: '#D1E4FF', label: 'Primary dark blue' },
+        secondary: { bg: '#3C4858', text: '#D7E3F7', subtext: '#BCC7DB', label: 'Secondary dark container' },
+        surface: { bg: '#111318', text: '#E2E2E9', subtext: '#C4C6CF', label: 'Surface dark container' }
+      }
+    }
+  },
   'default-purple': {
     name: 'Material Baseline Purple',
     colors: {
@@ -402,7 +417,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dragSelect, setDragSelect] = useState<{startX:number;startY:number;curX:number;curY:number} | null>(null);
   const activeComp = canvasComponents.find(c => c.id === selectedComponentId) as ComponentInstance | undefined;
-  const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('default-purple');
+  const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('baseline-blue');
 
   // --- FIGMA FILES LINKING & VIEWS ---
   const [linkedFigmaFiles, setLinkedFigmaFiles] = useState<LinkedFigmaFile[]>(() => {

@@ -154,3 +154,10 @@
     animation: energyHighFrequency 6s infinite ease-in-out;
   }
 }
+
+/* ── Google Sans Flex Variable ── */
+/* Loaded via @fontsource-variable/google-sans-flex in main.tsx */
+/* Applied to all M3 components */
+[class*="md-"] {
+  font-family: 'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+}
