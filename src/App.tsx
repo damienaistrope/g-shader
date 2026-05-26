@@ -1294,6 +1294,31 @@ figma.ui.onmessage = function(msg) {
     return localStorage.getItem('m3_api_url') || 'https://serve-dot-zipline.googleplex.com/asset/ac3dc997-fbb3-5e10-8d08-fd2b37b4f0b9/energy.glsl';
   });
   const [isEditingApiUrl, setIsEditingApiUrl] = useState<boolean>(false);
+  const [energyApiStatus, setEnergyApiStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+
+  // Verify the energy.glsl API endpoint on mount — confirms the shader source is reachable
+  useEffect(() => {
+    if (!apiUrl) return;
+    setEnergyApiStatus('loading');
+    fetch('/api/fetch-external-shader', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpointUrl: apiUrl }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.status === 'success' || data?.data?.isRawGlsl || data?.data?.shaderCode) {
+          setEnergyApiStatus('ok');
+          // If the fetched GLSL is different from what we ship, log it for debugging
+          if (data?.data?.shaderCode) {
+            console.log('[G→Shader] Energy API reachable — GLSL source verified:', data.data.shaderCode.length, 'chars');
+          }
+        } else {
+          setEnergyApiStatus('error');
+        }
+      })
+      .catch(() => setEnergyApiStatus('error'));
+  }, [apiUrl]);
 
   const [showAddLibraryForm, setShowAddLibraryForm] = useState<boolean>(false);
   const [newLibName, setNewLibName] = useState<string>('');
@@ -3465,10 +3490,12 @@ figma.ui.onmessage = function(msg) {
                   <div className="flex items-center justify-between bg-[#2C2C2C] border border-neutral-800 rounded px-2 py-1 gap-1.5 text-[10.5px] group/apilink overflow-hidden">
                     <a
                       href={apiUrl}
+                      title={`Energy API: ${energyApiStatus}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#18A0FB] hover:underline font-mono truncate text-[10px] select-all flex-1"
                     >
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${energyApiStatus === 'ok' ? 'bg-emerald-400' : energyApiStatus === 'error' ? 'bg-red-400' : energyApiStatus === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-neutral-600'}`} />
                       {apiUrl}
                     </a>
                     <ExternalLink className="w-3 h-3 text-neutral-500 shrink-0 group-hover/apilink:text-[#18A0FB] transition-colors" />
@@ -3690,7 +3717,9 @@ figma.ui.onmessage = function(msg) {
                     : (canvasBgMode === 'dark' ? '0 16px 40px rgba(0,0,0,0.5)' : '0 10px 24px rgba(0,0,0,0.08)');
 
                   // Compute physical card container blur (melts edges as per the API)
-                  const containerFilter = 'none';
+                  const energyBreath = isStateBlurred ? intensity : 0;
+                  const containerFilter = isStateBlurred ? `blur(${energyBreath * 0.8}px) saturate(${1 + energyBreath * 0.15})` : 'none';
+                  const containerScale = isStateBlurred ? `scale(${1 + energyBreath * 0.012})` : 'scale(1)';
 
                   // Compute inner WebGL simulation canvas blur for fluid liquid bloom (shader itself computes localized edge blurs, so keep canvas sharp & details visible)
                   const innerCanvasFilter = isStateBlurred 
@@ -3719,7 +3748,8 @@ figma.ui.onmessage = function(msg) {
                       style={{
                         left: `calc(50% + ${comp.x}px)`,
                         top: `calc(50% + ${comp.y}px)`,
-                        transform: 'translate(-50%, -50%)',
+                        transform: `translate(-50%, -50%) ${containerScale ?? 'scale(1)'}`,
+                        transition: 'transform 0.4s cubic-bezier(0.2,0,0,1), filter 0.4s cubic-bezier(0.2,0,0,1)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
                         height: comp.heightMode === 'auto' ? 'auto' : `${comp.height}px`,
                         minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
@@ -3772,7 +3802,7 @@ figma.ui.onmessage = function(msg) {
                         borderRadius={comp.borderRadius}
                         baseColorHex={compBgColor}
                         midColorHex={compMidColor}
-                        endColorHex={compEndColor}
+                        endColorHex={specEndColor ?? compEndColor}
                         hoverActive={isHovered && isSelected}
                         renderMode={1}
                         intensity={intensity}
@@ -3842,7 +3872,7 @@ figma.ui.onmessage = function(msg) {
                             borderRadius={comp.borderRadius}
                             baseColorHex={compBgColor}
                             midColorHex={compMidColor}
-                            endColorHex={compEndColor}
+                            endColorHex={specEndColor ?? compEndColor}
                             hoverActive={isHovered && isSelected}
                             renderMode={0}
                             intensity={intensity}
@@ -4568,10 +4598,10 @@ figma.ui.onmessage = function(msg) {
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
                 ========================================================================================= */}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
-              <div className="flex items-center justify-between w-full max-w-[1400px] mx-auto gap-4">
+              <div className="flex items-center justify-between w-full max-w-[1400px] mx-auto gap-3 flex-wrap">
                 
                 {/* 1. Motion */}
-                <div className="flex flex-col justify-between h-12 items-start shrink-0">
+                <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-fit">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
                     Motion
                   </span>
@@ -4592,11 +4622,16 @@ figma.ui.onmessage = function(msg) {
                 </div>
   
                 {/* 2. Speed */}
-                <div className="flex flex-col justify-end h-12 items-start shrink-0 w-[190px]">
-                  <div className="h-8 flex bg-[#1E1E1E] px-2.5 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2.5 select-none animate-fade-in">
+                <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-0 flex-1 max-w-[140px]">
+                  <div className="flex items-center justify-between w-full gap-1.5">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
                       Speed
                     </span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">
+                      {intensity.toFixed(2)}×
+                    </span>
+                  </div>
+                  <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2 select-none">
                     <input
                       type="range"
                       min="0.10"
@@ -4604,12 +4639,9 @@ figma.ui.onmessage = function(msg) {
                       step="0.05"
                       value={intensity}
                       onChange={(e) => setIntensity(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0"
                       title="Adjust animation speed"
                     />
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none text-right shrink-0 min-w-[32px]">
-                      {intensity.toFixed(2)}X
-                    </span>
                   </div>
                 </div>
   
@@ -4697,11 +4729,16 @@ figma.ui.onmessage = function(msg) {
                 </div>
    
                 {/* 6. Duration */}
-                <div className={`flex flex-col justify-end h-12 items-start transition-all duration-300 shrink-0 w-[190px] ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <div className="h-8 flex bg-[#1E1E1E] px-2.5 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2.5 select-none">
+                <div className={`flex flex-col justify-between h-12 items-start transition-all duration-300 shrink-0 min-w-0 flex-1 max-w-[140px] ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
+                  <div className="flex items-center justify-between w-full gap-1.5">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
                       Duration
                     </span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">
+                      {exportDuration}s
+                    </span>
+                  </div>
+                  <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2 select-none">
                     <input
                       type="range"
                       min="1"
@@ -4709,13 +4746,10 @@ figma.ui.onmessage = function(msg) {
                       step="1"
                       value={exportDuration}
                       onChange={(e) => setExportDuration(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0"
                       disabled={isRecording}
                       title="Adjust clip duration"
-                     />
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none text-right shrink-0 min-w-[20px]">
-                      {exportDuration}S
-                    </span>
+                    />
                   </div>
                 </div>
    
