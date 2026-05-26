@@ -200,33 +200,18 @@ const M3_COLOR_LIBRARIES: Record<string, {
   name: string;
   colors: Record<'light' | 'dark', Record<'primary' | 'secondary' | 'surface', { bg: string; text: string; subtext: string; label: string }>>
 }> = {
-  'baseline-blue': {
-    name: 'Material Baseline Blue',
-    colors: {
-      light: {
-        primary: { bg: '#0061A4', text: '#FFFFFF', subtext: '#D1E4FF', label: 'Primary filled blue' },
-        secondary: { bg: '#D7E3F7', text: '#101C2B', subtext: '#3C4858', label: 'Secondary container' },
-        surface: { bg: '#FDFBFF', text: '#1A1C1E', subtext: '#44474E', label: 'Surface container' },
-      },
-      dark: {
-        primary: { bg: '#A8C8FF', text: '#003063', subtext: '#D6E3FF', label: 'Primary dark blue' },
-        secondary: { bg: '#3C4858', text: '#D8E3F8', subtext: '#BCC7DC', label: 'Secondary dark' },
-        surface: { bg: '#111318', text: '#E2E2E9', subtext: '#C4C6CF', label: 'Surface dark' },
-      }
-    }
-  },
-  'baseline-purple': {
+  'default-purple': {
     name: 'Material Baseline Purple',
     colors: {
       light: {
         primary: { bg: '#6750A4', text: '#FFFFFF', subtext: '#EADDFF', label: 'Primary filled purple' },
         secondary: { bg: '#E8DEF8', text: '#1D192B', subtext: '#49454F', label: 'Secondary container' },
-        surface: { bg: '#FEF7FF', text: '#1D1B20', subtext: '#49454F', label: 'Surface container' },
+        surface: { bg: '#FEF7FF', text: '#1D1B20', subtext: '#49454F', label: 'Surface container' }
       },
       dark: {
         primary: { bg: '#D0BCFF', text: '#381E72', subtext: '#381E72', label: 'Primary dark purple' },
         secondary: { bg: '#332D41', text: '#E8DEF8', subtext: '#CCC2DC', label: 'Secondary dark container' },
-        surface: { bg: '#141218', text: '#E6E1E5', subtext: '#938F99', label: 'Surface dark container' },
+        surface: { bg: '#141218', text: '#E6E1E5', subtext: '#938F99', label: 'Surface dark container' }
       }
     }
   },
@@ -417,7 +402,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dragSelect, setDragSelect] = useState<{startX:number;startY:number;curX:number;curY:number} | null>(null);
   const activeComp = canvasComponents.find(c => c.id === selectedComponentId) as ComponentInstance | undefined;
-  const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('baseline-blue');
+  const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('default-purple');
 
   // --- FIGMA FILES LINKING & VIEWS ---
   const [linkedFigmaFiles, setLinkedFigmaFiles] = useState<LinkedFigmaFile[]>(() => {
@@ -499,14 +484,6 @@ export default function App() {
   // Listen for delete/backspace key globally to delete selected component
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Delete selected components
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
-        const active = document.activeElement;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).contentEditable === 'true')) return;
-        setCanvasComponents(prev => prev.filter(c => !selectedIds.has(c.id)));
-        setSelectedIds(new Set());
-        return;
-      }
       // Avoid deleting when user is typing inside input, select, or textarea
       const target = e.target as HTMLElement;
       if (
@@ -624,7 +601,7 @@ export default function App() {
     setBackdropScale(comb.backdropScale ?? 100);
     setIsBackdropVisible(comb.isBackdropVisible ?? true);
     setCanvasBgMode(comb.canvasBgMode || 'dark');
-    setGlobalColorLibrary(comb.globalColorLibrary || 'baseline-blue');
+    setGlobalColorLibrary(comb.globalColorLibrary || 'default-purple');
     setActiveState(comb.activeState || 2);
     setSelectedFigmaFileId(comb.figmaFileId || 'fig-1');
     setActiveCombinationId(comb.id);
@@ -720,103 +697,25 @@ export default function App() {
         editorType: ["figma"]
       }, null, 2));
 
-      // code.js — real Figma API bridge
-      zip.file('code.js', `// G->Shader Figma Plugin
-figma.showUI(__html__, { width: 1100, height: 780, title: 'G->Shader' });
-figma.ui.postMessage({ type: 'PLUGIN_READY' });
-figma.on('selectionchange', function() { sendSelectionData(); });
-function sendSelectionData() {
-  var layers = figma.currentPage.selection.map(function(node) {
-    var fills = [];
-    if ('fills' in node && Array.isArray(node.fills)) {
-      fills = node.fills.map(function(f) {
-        var color = undefined;
-        if (f.type === 'SOLID' && f.color) {
-          color = { r: f.color.r, g: f.color.g, b: f.color.b, a: f.opacity !== undefined ? f.opacity : 1 };
-        }
-        return { type: f.type, color: color };
-      });
-    }
-    return {
-      id: node.id, name: node.name, type: node.type,
-      width: 'width' in node ? node.width : 0,
-      height: 'height' in node ? node.height : 0,
-      x: 'x' in node ? node.x : 0,
-      y: 'y' in node ? node.y : 0,
-      fills: fills,
-      cornerRadius: ('cornerRadius' in node && typeof node.cornerRadius === 'number') ? node.cornerRadius : 0,
-    };
-  });
-  figma.ui.postMessage({ type: 'SELECTION_DATA', layers: layers });
-}
-figma.ui.onmessage = function(msg) {
-  try {
-    if (msg.type === 'GET_SELECTION') {
-      sendSelectionData();
-    } else if (msg.type === 'EXPORT_TO_FIGMA') {
-      var base64 = msg.imageData.replace(/^data:image\\/png;base64,/, '');
-      var bytes = figma.base64Decode(base64);
-      var imageHash = figma.createImage(bytes).hash;
-      var targetNode = figma.currentPage.selection[0];
-      if (!targetNode || !('fills' in targetNode)) {
-        var frame = figma.createFrame();
-        frame.resize(msg.width, msg.height);
-        frame.name = msg.layerName;
-        frame.x = figma.viewport.center.x - msg.width / 2;
-        frame.y = figma.viewport.center.y - msg.height / 2;
-        figma.currentPage.appendChild(frame);
-        targetNode = frame;
-      }
-      if ('fills' in targetNode) {
-        targetNode.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: imageHash }];
-        targetNode.name = msg.layerName;
-        figma.viewport.scrollAndZoomIntoView([targetNode]);
-      }
-      figma.ui.postMessage({ type: 'EXPORT_COMPLETE', nodeId: targetNode.id });
-    } else if (msg.type === 'CREATE_FRAME') {
-      var newFrame = figma.createFrame();
-      newFrame.resize(msg.width, msg.height);
-      newFrame.name = msg.name;
-      newFrame.x = figma.viewport.center.x - msg.width / 2;
-      newFrame.y = figma.viewport.center.y - msg.height / 2;
-      figma.currentPage.appendChild(newFrame);
-      figma.currentPage.selection = [newFrame];
-      figma.viewport.scrollAndZoomIntoView([newFrame]);
-      sendSelectionData();
-    } else if (msg.type === 'CLOSE') {
-      figma.closePlugin();
-    }
-  } catch (err) {
-    figma.ui.postMessage({ type: 'ERROR', message: err.message || String(err) });
+      // code.js
+      zip.file('code.js', `figma.showUI(__html__, { width: 980, height: 750 });
+figma.ui.onmessage = (msg) => {
+  if (msg.type === "close") {
+    figma.closePlugin();
   }
 };`);
 
-      // ui.html — message relay bridge
+      // ui.html
       zip.file('ui.html', `<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #1E1E1E; overflow: hidden; }
-    iframe { width: 100%; height: 100%; border: 0; display: block; }
-    #loading { position: fixed; inset: 0; background: #1E1E1E; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #E6E6E6; font-family: sans-serif; font-size: 13px; transition: opacity 0.4s; }
-    .spinner { width: 28px; height: 28px; border: 2px solid #333; border-top-color: #18A0FB; border-radius: 50%; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1E1E1E; }
+    iframe { width: 100%; height: 100%; border: 0; }
   </style>
 </head>
 <body>
-  <div id="loading"><div class="spinner"></div><span>Loading G&#8594;Shader&#8230;</span></div>
-  <iframe id="app" src="${window.location.origin}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-    onload="var l=document.getElementById('loading');if(l){l.style.opacity='0';setTimeout(function(){l.parentNode&&l.parentNode.removeChild(l);},400);}"></iframe>
-  <script>
-    window.addEventListener('message', function(e) {
-      var iframe = document.getElementById('app');
-      if (!iframe) return;
-      if (e.source === window.parent && e.data && e.data.pluginMessage) { iframe.contentWindow.postMessage(e.data, '*'); return; }
-      if (e.source === iframe.contentWindow && e.data && e.data.pluginMessage) { window.parent.postMessage(e.data, '*'); return; }
-    });
-  </script>
+  <iframe src="${window.location.origin}"></iframe>
 </body>
 </html>`);
 
@@ -886,7 +785,7 @@ figma.ui.onmessage = function(msg) {
     } else if (type === 'card') {
       name = `❖ Card ${Math.floor(Math.random() * 90) + 10}`;
       width = 300;
-      height = 400;
+      height = 360;
       borderRadius = 16;
       text = "Continuous wave rendering is active.";
       title = "Card Title";
@@ -1322,41 +1221,16 @@ figma.ui.onmessage = function(msg) {
     return localStorage.getItem('m3_api_url') || 'https://serve-dot-zipline.googleplex.com/asset/ac3dc997-fbb3-5e10-8d08-fd2b37b4f0b9/energy.glsl';
   });
   const [isEditingApiUrl, setIsEditingApiUrl] = useState<boolean>(false);
-  const [energyApiStatus, setEnergyApiStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
-
-  // Verify the energy.glsl API endpoint on mount — confirms the shader source is reachable
-  useEffect(() => {
-    if (!apiUrl) return;
-    setEnergyApiStatus('loading');
-    fetch('/api/fetch-external-shader', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpointUrl: apiUrl }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data?.status === 'success' || data?.data?.isRawGlsl || data?.data?.shaderCode) {
-          setEnergyApiStatus('ok');
-          // If the fetched GLSL is different from what we ship, log it for debugging
-          if (data?.data?.shaderCode) {
-            console.log('[G→Shader] Energy API reachable — GLSL source verified:', data.data.shaderCode.length, 'chars');
-          }
-        } else {
-          setEnergyApiStatus('error');
-        }
-      })
-      .catch(() => setEnergyApiStatus('error'));
-  }, [apiUrl]);
 
   const [showAddLibraryForm, setShowAddLibraryForm] = useState<boolean>(false);
   const [newLibName, setNewLibName] = useState<string>('');
   
   // Custom Library Quick color pickers
-  const [newLibPrimaryLight, setNewLibPrimaryLight] = useState<string>('#0061A4');
+  const [newLibPrimaryLight, setNewLibPrimaryLight] = useState<string>('#6750A4');
   const [newLibSecondaryLight, setNewLibSecondaryLight] = useState<string>('#E8DEF8');
   const [newLibSurfaceLight, setNewLibSurfaceLight] = useState<string>('#FEF7FF');
 
-  const [newLibPrimaryDark, setNewLibPrimaryDark] = useState<string>('#A8C8FF');
+  const [newLibPrimaryDark, setNewLibPrimaryDark] = useState<string>('#D0BCFF');
   const [newLibSecondaryDark, setNewLibSecondaryDark] = useState<string>('#332D41');
   const [newLibSurfaceDark, setNewLibSurfaceDark] = useState<string>('#141218');
   
@@ -2237,14 +2111,14 @@ figma.ui.onmessage = function(msg) {
 
   // Resolve colors dynamically by component or defaults
   const getComponentColors = (c: ComponentInstance, mode: 'light' | 'dark') => {
-    const libKey = c.colorLibrary || globalColorLibrary || 'baseline-blue';
-    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
+    const libKey = c.colorLibrary || globalColorLibrary || 'default-purple';
+    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
     return lib.colors[mode][c.containerType];
   };
 
   const getM3SpecificStyles = (comp: ComponentInstance, mode: 'light' | 'dark') => {
-    const libKey = comp.colorLibrary || globalColorLibrary || 'baseline-blue';
-    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
+    const libKey = comp.colorLibrary || globalColorLibrary || 'default-purple';
+    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
     const libColors = lib.colors[mode];
     
     let bg = libColors[comp.containerType]?.bg || '#ffffff';
@@ -3329,7 +3203,7 @@ figma.ui.onmessage = function(msg) {
                         {/* Predefined Dynamic Colors and Custom Swatch together */}
                         {(() => {
                           const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['baseline-blue'];
+                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['default-purple'];
                           const swatches = [
                             { hex: lib.colors.light.surface.bg, label: 'Theme Surface (Light)' },
                             { hex: lib.colors.dark.surface.bg, label: 'Theme Surface (Dark)' }
@@ -3360,7 +3234,7 @@ figma.ui.onmessage = function(msg) {
                       {/* Custom color picker swatch with rainbow background prior to selection, solid + checkmark when active */}
                       {(() => {
                         const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
+                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
                         const darkHex = lib.colors.dark.surface.bg;
                         const lightHex = lib.colors.light.surface.bg;
                         
@@ -3518,12 +3392,10 @@ figma.ui.onmessage = function(msg) {
                   <div className="flex items-center justify-between bg-[#2C2C2C] border border-neutral-800 rounded px-2 py-1 gap-1.5 text-[10.5px] group/apilink overflow-hidden">
                     <a
                       href={apiUrl}
-                      title={`Energy API: ${energyApiStatus}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#18A0FB] hover:underline font-mono truncate text-[10px] select-all flex-1"
                     >
-                      <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${energyApiStatus === 'ok' ? 'bg-emerald-400' : energyApiStatus === 'error' ? 'bg-red-400' : energyApiStatus === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-neutral-600'}`} />
                       {apiUrl}
                     </a>
                     <ExternalLink className="w-3 h-3 text-neutral-500 shrink-0 group-hover/apilink:text-[#18A0FB] transition-colors" />
@@ -3541,52 +3413,11 @@ figma.ui.onmessage = function(msg) {
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
-          onMouseMove={(e) => {
-            if (!dragSelect) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const curX = e.clientX - rect.left;
-            const curY = e.clientY - rect.top;
-            setDragSelect(d => d ? { ...d, curX, curY } : null);
-          }}
-          onMouseUp={(e) => {
-            if (!dragSelect) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const selBox = {
-              left: Math.min(dragSelect.startX, dragSelect.curX),
-              top: Math.min(dragSelect.startY, dragSelect.curY),
-              right: Math.max(dragSelect.startX, dragSelect.curX),
-              bottom: Math.max(dragSelect.startY, dragSelect.curY),
-            };
-            if (selBox.right - selBox.left > 4 || selBox.bottom - selBox.top > 4) {
-              const canvasW = rect.width;
-              const canvasH = rect.height;
-              const newIds = new Set<string>();
-              canvasComponents.forEach(comp => {
-                const cx = canvasW / 2 + comp.x;
-                const cy = canvasH / 2 + comp.y;
-                const cl = cx - comp.width / 2;
-                const ct = cy - comp.height / 2;
-                const cr = cx + comp.width / 2;
-                const cb = cy + comp.height / 2;
-                if (cr > selBox.left && cl < selBox.right && cb > selBox.top && ct < selBox.bottom) {
-                  newIds.add(comp.id);
-                }
-              });
-              setSelectedIds(newIds);
-            }
-            setDragSelect(null);
-          }}
-          data-theme={canvasBgMode}
           style={isBackdropVisible && activeBackdrop === 'solid' ? { backgroundColor: backdropSolidColor } : undefined}
           onMouseDown={(e) => {
             window.focus();
             if (e.target === e.currentTarget) {
               setSelectedComponentId('');
-              setSelectedIds(new Set());
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = e.clientX - rect.left;
-              const y = e.clientY - rect.top;
-              setDragSelect({ startX: x, startY: y, curX: x, curY: y });
             }
             // Capturing click anywhere on/off components on the canvas
             const rect = e.currentTarget.getBoundingClientRect();
@@ -3710,23 +3541,7 @@ figma.ui.onmessage = function(msg) {
               </div>
             ) : (
               <div className="absolute inset-0 z-10 pointer-events-none">
-                {/* Drag-select box */}
-          {dragSelect && (
-            <div style={{
-              position: 'absolute',
-              left: Math.min(dragSelect.startX, dragSelect.curX),
-              top: Math.min(dragSelect.startY, dragSelect.curY),
-              width: Math.abs(dragSelect.curX - dragSelect.startX),
-              height: Math.abs(dragSelect.curY - dragSelect.startY),
-              border: '1.5px solid #18A0FB',
-              backgroundColor: 'rgba(24,160,251,0.08)',
-              pointerEvents: 'none',
-              zIndex: 999,
-              borderRadius: 2,
-            }} />
-          )}
-
-          {canvasComponents.map((comp) => {
+                {canvasComponents.map((comp) => {
                   const isSelected = selectedComponentId === comp.id;
                   // Resolve spec colors
                   const themeColors = getM3SpecificStyles(comp, canvasBgMode);
@@ -3737,8 +3552,8 @@ figma.ui.onmessage = function(msg) {
                   const compShadow = themeColors.shadow;
                   const hasBaseShaderBg = themeColors.hasBaseShaderBg;
 
-                  const libKey = comp.colorLibrary || globalColorLibrary || 'baseline-blue';
-                  const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
+                  const libKey = comp.colorLibrary || globalColorLibrary || 'default-purple';
+                  const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
                   const libColors = lib.colors[canvasBgMode];
 
                   const compState = comp.activeState !== undefined ? comp.activeState : 0;
@@ -3802,9 +3617,7 @@ figma.ui.onmessage = function(msg) {
                     : (canvasBgMode === 'dark' ? '0 16px 40px rgba(0,0,0,0.5)' : '0 10px 24px rgba(0,0,0,0.08)');
 
                   // Compute physical card container blur (melts edges as per the API)
-                  const energyBreath = isStateBlurred ? intensity : 0;
-                  const containerFilter = isStateBlurred ? `blur(${energyBreath * 0.8}px) saturate(${1 + energyBreath * 0.15})` : 'none';
-                  const containerScale = isStateBlurred ? `scale(${1 + energyBreath * 0.012})` : 'scale(1)';
+                  const containerFilter = 'none';
 
                   // Compute inner WebGL simulation canvas blur for fluid liquid bloom (shader itself computes localized edge blurs, so keep canvas sharp & details visible)
                   const innerCanvasFilter = isStateBlurred 
@@ -3828,17 +3641,19 @@ figma.ui.onmessage = function(msg) {
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
                       className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
-                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (selectedIds.has(comp.id) && !isRecording) ? 'ring-2 ring-[#18A0FB]/60 ring-offset-1 ring-offset-transparent z-25' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
+                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
                         left: `calc(50% + ${comp.x}px)`,
                         top: `calc(50% + ${comp.y}px)`,
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
-                        height: `${comp.height}px`,
-
+                        height: comp.heightMode === 'auto' ? 'auto' : `${comp.height}px`,
+                        minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
+                        minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
-                        boxShadow: dynamicGlow
+                        boxShadow: dynamicGlow,
+                        filter: containerFilter
                       }}
                       onMouseDown={(e) => handleMoveStart(e, comp.id)}
                       onMouseMove={(e) => {
@@ -3860,16 +3675,6 @@ figma.ui.onmessage = function(msg) {
                     </div>
                   )}
 
-                  {/* ── ENERGY + SURFACE LAYER — acts as one unit ── */}
-                  {/* Content sits in a separate z-layer above and is never blurred */}
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
-                      zIndex: 0,
-                      overflow: 'hidden',
-                    }}
-                  >
                   {/* Dynamic organic ambient backdrop representing energy-derived motion blur, custom-modulated */}
                   {isStateBlurred && (
                     <div 
@@ -3941,7 +3746,7 @@ figma.ui.onmessage = function(msg) {
                       }}
                     >
                       {/* GLSL dynamic webgl fluid wave rendering canvas wrapper with dynamic bleed and blur inside the active background container */}
-                      {hasBaseShaderBg && compState !== 0 && !isElementSpecimen && (
+                      {hasBaseShaderBg && compState !== 0 && (
                         <div 
                           className="absolute pointer-events-none transition-all duration-300"
                           style={{
@@ -3993,14 +3798,11 @@ figma.ui.onmessage = function(msg) {
 
 
 
-
-                  </div>
                     {/* =========================================================
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className={`relative w-full h-full z-10 flex flex-col pointer-events-auto ${['card','dialog','sheets'].includes(comp.type) ? 'items-stretch' : 'items-center justify-center'}`}
-                      style={{ isolation: 'isolate' }}
+                      className="relative w-full h-full z-10 flex flex-col pointer-events-auto shrink-0 grow justify-center"
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
@@ -4012,7 +3814,15 @@ figma.ui.onmessage = function(msg) {
                             onClick={handleButtonClick}
                             icon={comp.configShowIcon ? <span className="material-symbols-outlined select-none" style={{ fontSize: 'inherit' }}>{localIcon}</span> : undefined}
                             className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{}}
+                            style={{ 
+                              color: compTextColor,
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
+                              border: compState !== 0 ? 'none' : compBorderColor !== 'transparent' ? `1px solid ${compBorderColor}` : undefined,
+                              boxShadow: compState !== 0 ? 'none' : compShadow,
+                              borderRadius: 'inherit'
+                            }}
                           >
                             <span 
                               contentEditable
@@ -4030,48 +3840,242 @@ figma.ui.onmessage = function(msg) {
 
                       {/* SPECIMEN: CARD */}
                       {comp.type === 'card' && (
-                        <M3Card
+                        <M3Card 
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
-                          style={{ width: '100%', height: '100%', borderRadius: `${comp.borderRadius}px` } as any}
+                          className="w-full h-full"
+                          style={{ borderRadius: `${comp.borderRadius}px` }}
                         >
-                          <M3CardHeader
-                            avatar={comp.configShowIcon ? <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span> : undefined}
-                            header={comp.configShowTitle ? comp.title || 'Card Title' : undefined}
-                            subhead={comp.configShowSubtitle ? comp.subtitle || 'Subtitle' : undefined}
-                            action={<span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)', cursor: 'pointer' }}>more_vert</span>}
-                          />
-                          <M3CardMedia aspectRatio="16/9">
-                            <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
-                          </M3CardMedia>
-                          {comp.configShowDescription && (
-                            <M3CardContent title={`${comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Elevated'} Card`} subtitle="Material 3 • Today">
-                              {comp.text || 'Continuous wave rendering is active.'}
-                            </M3CardContent>
-                          )}
-                          {comp.configShowActions && (
-                            <M3CardActions>
-                              <M3Button variant="outlined" size="s">Secondary</M3Button>
-                              <M3Button variant="filled" size="s">Action</M3Button>
-                            </M3CardActions>
+                          {(comp.layout || 'vertical') === 'vertical' ? (
+                            <>
+                              {/* Vertical Card Structure */}
+                              <div className="flex flex-col">
+                                {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
+                                  <M3CardHeader
+                                    avatar={comp.configShowIcon ? (
+                                      <div 
+                                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/10 shadow-sm select-none relative overflow-hidden"
+                                        style={{ backgroundColor: comp.iconBgColor || 'rgba(0,0,0,0.15)' }}
+                                      >
+                                        {((comp.avatarType || (comp.iconImage ? 'image' : 'icon')) === 'image' && comp.iconImage) ? (
+                                          <img referrerPolicy="no-referrer" src={comp.iconImage} className="w-full h-full object-cover" alt="Avatar" />
+                                        ) : (comp.avatarType || 'icon') === 'initials' ? (
+                                          <span className="text-[12px] font-sans font-bold text-white uppercase select-none leading-none tracking-wide">
+                                            {comp.avatarInitials || (comp.title ? comp.title.slice(0, 2).toUpperCase() : 'AV')}
+                                          </span>
+                                        ) : (
+                                          <span className="material-symbols-outlined text-[20px] leading-none text-white opacity-90">{localIcon}</span>
+                                        )}
+                                      </div>
+                                    ) : undefined}
+                                    header={comp.configShowTitle ? (
+                                      <span 
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                                        className={`${titleFont.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
+                                        style={{ color: compTextColor }}
+                                      >
+                                        {comp.title}
+                                      </span>
+                                    ) : undefined}
+                                    subhead={comp.configShowSubtitle ? (
+                                      <span 
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                                        className={`${M3_FONT_STYLES.bodySmall.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
+                                        style={{ color: compSubtextColor }}
+                                      >
+                                        {comp.subtitle}
+                                      </span>
+                                    ) : undefined}
+                                    action={
+                                      <div className="text-neutral-400 hover:text-neutral-250 p-1 cursor-pointer hover:bg-white/5 rounded-full">
+                                        <span className="material-symbols-outlined select-none" style={{ fontSize: '18px' }}>more_vert</span>
+                                      </div>
+                                    }
+                                  />
+                                )}
+                                
+                                {/* Large Media Block in Vertical card */}
+                                <M3CardMedia className="h-32 bg-neutral-200/5 dark:bg-neutral-800/40 relative overflow-hidden flex items-center justify-center border-y border-neutral-800/10 dark:border-white/5">
+                                  <span className="material-symbols-outlined text-[28px] opacity-25 text-neutral-400">image</span>
+                                </M3CardMedia>
+ 
+                                {comp.configShowDescription && (
+                                  <M3CardContent className="flex-1 min-h-0 py-3.5 px-4 select-text">
+                                    <div className="text-[14px] font-bold font-sans mb-1" style={{ color: compTextColor }}>
+                                      {comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Outlined'} Card
+                                    </div>
+                                    <div className="text-[11px] font-sans mb-2.5" style={{ color: compSubtextColor }}>Material 3 • Today</div>
+                                    <p 
+                                      contentEditable
+                                      suppressContentEditableWarning
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                                      className={`${descFont.class} ${comp.heightMode === 'auto' ? '' : 'line-clamp-3'} leading-relaxed hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors`} 
+                                      style={{ color: compTextColor }}
+                                    >
+                                      {comp.text}
+                                    </p>
+                                  </M3CardContent>
+                                )}
+                              </div>
+
+                              {comp.configShowActions && (
+                                <M3CardActions>
+                                  <div className="flex justify-end items-center gap-2 shrink-0 pt-2 border-t border-white/5 select-none w-full px-4 pb-4">
+                                    <M3Button 
+                                      variant="outlined" 
+                                      size="s"
+                                      className="rounded-full"
+                                      style={{ color: libColors.primary.bg, borderColor: libColors.primary.bg }}
+                                    >
+                                      Secondary
+                                    </M3Button>
+                                    <M3Button 
+                                      variant="filled" 
+                                      size="s"
+                                      className="rounded-full"
+                                      style={{ backgroundColor: libColors.primary.bg, color: libColors.primary.text }}
+                                    >
+                                      Action
+                                    </M3Button>
+                                  </div>
+                                </M3CardActions>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {/* Horizontal Card Structure per HORIZONTAL CARD SPECS */}
+                              <div className="flex flex-row w-full h-full items-stretch justify-between">
+                                <div className="flex-1 flex flex-col justify-between p-4 min-h-0 text-left">
+                                  {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
+                                    <div className="flex gap-3 items-center">
+                                      {comp.configShowIcon && (
+                                        <div 
+                                          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/10 shadow-sm select-none relative overflow-hidden mb-1"
+                                          style={{ backgroundColor: comp.iconBgColor || 'rgba(0,0,0,0.15)' }}
+                                        >
+                                          {((comp.avatarType || (comp.iconImage ? 'image' : 'icon')) === 'image' && comp.iconImage) ? (
+                                            <img referrerPolicy="no-referrer" src={comp.iconImage} className="w-full h-full object-cover" alt="Avatar" />
+                                          ) : (comp.avatarType || 'icon') === 'initials' ? (
+                                            <span className="text-[12px] font-sans font-bold text-white uppercase select-none leading-none tracking-wide">
+                                              {comp.avatarInitials || (comp.title ? comp.title.slice(0, 2).toUpperCase() : 'AV')}
+                                            </span>
+                                          ) : (
+                                            <span className="material-symbols-outlined text-[20px] leading-none text-white opacity-90">{localIcon}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                      <div className="flex flex-col">
+                                        {comp.configShowTitle && (
+                                          <span 
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                                            className={`${titleFont.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
+                                            style={{ color: compTextColor }}
+                                          >
+                                            {comp.title}
+                                          </span>
+                                        )}
+                                        {comp.configShowSubtitle && (
+                                          <span 
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                                            className={`${M3_FONT_STYLES.bodySmall.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
+                                            style={{ color: compSubtextColor }}
+                                          >
+                                            {comp.subtitle}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {comp.configShowDescription && (
+                                    <div className="my-2 select-text">
+                                      <p 
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                                        className="text-[11.5px] leading-relaxed text-neutral-500 dark:text-neutral-400 line-clamp-2 hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors"
+                                        style={{ color: compTextColor }}
+                                      >
+                                        {comp.text}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {comp.configShowActions && (
+                                    <div className="flex justify-start items-center gap-2 select-none w-full mt-1">
+                                      <M3Button variant="outlined" size="xs" style={{ color: libColors.primary.bg, borderColor: libColors.primary.bg }}>Secondary</M3Button>
+                                      <M3Button variant="filled" size="xs" style={{ backgroundColor: libColors.primary.bg, color: libColors.primary.text }}>Action</M3Button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Right Side Media Content aligned per Horizontal card spec */}
+                                <M3CardMedia className="w-[110px] bg-neutral-250/20 dark:bg-neutral-800/60 flex shrink-0 items-center justify-center border-l border-neutral-800/10 dark:border-white/5">
+                                  <span className="material-symbols-outlined text-[24px] opacity-25 text-neutral-400">image</span>
+                                </M3CardMedia>
+                              </div>
+                            </>
                           )}
                         </M3Card>
                       )}
 
                       {/* SPECIMEN: CHIP */}
                       {comp.type === 'chip' && (
-                        <div className="flex items-center justify-center p-3">
-                          <M3Chip
-                            label={comp.text || 'Interactive'}
+                        <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
+                          <M3Chip 
+                            label=""
                             variant={(comp.variant as any) || 'assist'}
                             icon={comp.configShowIcon ? localIcon : undefined}
                             selected={comp.selectedState || compState === 2}
                             onRemove={comp.variant === 'input' ? (() => {}) : undefined}
-                            onClick={handleButtonClick}
-                          />
+                            className="pointer-events-auto w-full h-full justify-center items-center"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
+                              border: compState !== 0 ? 'none' : compBorderColor !== 'transparent' ? `1px solid ${compBorderColor}` : undefined,
+                              boxShadow: compState !== 0 ? 'none' : undefined,
+                              borderRadius: 'inherit',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: compTextColor
+                            }}
+                          >
+                            <span 
+                              contentEditable
+                              suppressContentEditableWarning
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                              className="text-[12px] font-sans font-medium tracking-[0.0125em] hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors flex items-center justify-center text-center select-text leading-none"
+                              style={{ color: compTextColor }}
+                            >
+                              {comp.text}
+                            </span>
+                          </M3Chip>
                         </div>
                       )}
-
 
                       {/* SPECIMEN: FAB  */}
                       {comp.type === 'fab' && (
@@ -4082,7 +4086,19 @@ figma.ui.onmessage = function(msg) {
                             variant={(comp.variant as any) || 'primary'}
                             size={comp.sizePreset === 'xlarge' ? 'extended' : comp.sizePreset === 'small' || comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'large' ? 'large' : 'medium'}
                             onClick={handleButtonClick}
-                            style={{}}
+                            className="pointer-events-auto w-full h-full justify-center items-center"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
+                              color: compTextColor,
+                              border: compState !== 0 ? 'none' : undefined,
+                              boxShadow: compState !== 0 ? 'none' : undefined,
+                              borderRadius: 'inherit',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
                           />
                         </div>
                       )}
@@ -4325,8 +4341,8 @@ figma.ui.onmessage = function(msg) {
                       {comp.type === 'avatar' && (
                         <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
                           <M3Avatar 
-                            src={(comp.avatarType === 'image') ? (comp.iconImage || undefined) : undefined}
-                            initials={comp.avatarType === 'initials' ? (comp.avatarInitials || comp.text || 'A') : (comp.avatarType === 'icon' ? undefined : (comp.text || 'A'))}
+                            src={(comp.variant === 'image') ? (comp.iconImage || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop") : undefined}
+                            initials={(comp.variant === 'initials' || !comp.variant) ? comp.text : undefined}
                             size={comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'medium' ? 'medium' : 'large'}
                             className="w-full h-full rounded-full"
                             style={{
@@ -4346,16 +4362,18 @@ figma.ui.onmessage = function(msg) {
                         <div className="w-full h-full flex flex-col items-center justify-center p-3" style={{ borderRadius: 'inherit' }}>
                           {comp.variant === 'circular' ? (
                             <M3CircularProgress 
-                              indeterminate={compState === 0 || true} 
-                              value={0.65}
+                              indeterminate={true} 
                               variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'} 
+                              energyColorStart={compMidColor}
+                              energyColorEnd={compEndColor}
                             />
                           ) : (
                             <div className="w-full">
                               <M3LinearProgress 
-                                indeterminate={compState === 0 || true} 
-                                value={0.65}
+                                indeterminate={true} 
                                 variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'} 
+                                energyColorStart={compMidColor}
+                                energyColorEnd={compEndColor}
                               />
                             </div>
                           )}
@@ -4474,10 +4492,10 @@ figma.ui.onmessage = function(msg) {
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
                 ========================================================================================= */}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
-              <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-3">
+              <div className="flex items-center justify-between w-full max-w-[1400px] mx-auto gap-4">
                 
                 {/* 1. Motion */}
-                <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-fit">
+                <div className="flex flex-col justify-between h-12 items-start shrink-0">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
                     Motion
                   </span>
@@ -4498,12 +4516,11 @@ figma.ui.onmessage = function(msg) {
                 </div>
   
                 {/* 2. Speed */}
-                <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-0 flex-1 max-w-[140px]">
-                  <div className="flex items-center justify-between w-full gap-1">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0 hidden sm:block">Speed</span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">{intensity.toFixed(2)}×</span>
-                  </div>
-                  <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2 select-none">
+                <div className="flex flex-col justify-end h-12 items-start shrink-0 w-[190px]">
+                  <div className="h-8 flex bg-[#1E1E1E] px-2.5 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2.5 select-none animate-fade-in">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
+                      Speed
+                    </span>
                     <input
                       type="range"
                       min="0.10"
@@ -4511,9 +4528,12 @@ figma.ui.onmessage = function(msg) {
                       step="0.05"
                       value={intensity}
                       onChange={(e) => setIntensity(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0"
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
                       title="Adjust animation speed"
                     />
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none text-right shrink-0 min-w-[32px]">
+                      {intensity.toFixed(2)}X
+                    </span>
                   </div>
                 </div>
   
@@ -4601,12 +4621,11 @@ figma.ui.onmessage = function(msg) {
                 </div>
    
                 {/* 6. Duration */}
-                <div className={`flex flex-col justify-between h-12 items-start transition-all duration-300 shrink-0 min-w-0 flex-1 max-w-[140px] ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <div className="flex items-center justify-between w-full gap-1">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0 hidden sm:block">Duration</span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">{exportDuration}s</span>
-                  </div>
-                  <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2 select-none">
+                <div className={`flex flex-col justify-end h-12 items-start transition-all duration-300 shrink-0 w-[190px] ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
+                  <div className="h-8 flex bg-[#1E1E1E] px-2.5 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2.5 select-none">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
+                      Duration
+                    </span>
                     <input
                       type="range"
                       min="1"
@@ -4614,10 +4633,13 @@ figma.ui.onmessage = function(msg) {
                       step="1"
                       value={exportDuration}
                       onChange={(e) => setExportDuration(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0"
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
                       disabled={isRecording}
                       title="Adjust clip duration"
-                    />
+                     />
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none text-right shrink-0 min-w-[20px]">
+                      {exportDuration}S
+                    </span>
                   </div>
                 </div>
    
