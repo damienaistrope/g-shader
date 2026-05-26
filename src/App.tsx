@@ -3780,7 +3780,7 @@ figma.ui.onmessage = (msg) => {
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
                       className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
-                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (selectedIds.has(comp.id) && !isRecording) ? 'ring-2 ring-[#18A0FB]/50 ring-offset-1 ring-offset-transparent z-25' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
+                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (selectedIds.has(comp.id) && !isRecording) ? 'ring-2 ring-[#18A0FB] ring-offset-1 ring-offset-[#1E1E1E]/50 z-25' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
                         left: `calc(50% + ${comp.x}px)`,
@@ -3917,7 +3917,13 @@ figma.ui.onmessage = (msg) => {
                          #specimen-wrapper-${comp.id} .md-card--outlined,
                          #specimen-wrapper-${comp.id} .md-dialog,
                          #specimen-wrapper-${comp.id} .md-bottom-sheet,
-                         #specimen-wrapper-${comp.id} .md-side-sheet,
+                         #specimen-wrapper-${comp.id} .md-side-sheet {
+                           background-color: transparent !important;
+                           background: transparent !important;
+                           box-shadow: none !important;
+                         }
+                       ` : ''}
+                       ${(compState !== 0 && isElementSpecimen) ? `
                          #specimen-wrapper-${comp.id} .md-button,
                          #specimen-wrapper-${comp.id} .md-fab,
                          #specimen-wrapper-${comp.id} .md-chip,
@@ -4009,8 +4015,8 @@ figma.ui.onmessage = (msg) => {
                               )}
                               {comp.configShowActions && (
                                 <M3CardActions>
-                                  <M3Button variant="outlined" size="s" onClick={() => cycleComponentSize(comp.id)}>Secondary</M3Button>
-                                  <M3Button variant="filled" size="s" onClick={() => cycleComponentSize(comp.id)}>Action</M3Button>
+                                  <M3Button variant={((comp as any).configSecondaryBtnVariant || 'outlined') as any} size="s" onClick={() => cycleComponentSize(comp.id)}>{(comp as any).configSecondaryBtnText || 'Secondary'}</M3Button>
+                                  <M3Button variant={((comp as any).configActionBtnVariant || 'filled') as any} size="s" onClick={() => cycleComponentSize(comp.id)}>{(comp as any).configActionBtnText || 'Action'}</M3Button>
                                 </M3CardActions>
                               )}
                             </>
@@ -4468,30 +4474,30 @@ figma.ui.onmessage = (msg) => {
             </div>
           )}
 
-            {/* GLOBAL ENERGY STATE STRIP — sits just above the bottom console */}
-            <div className="absolute bottom-20 left-0 right-0 z-40 px-8 flex items-center justify-center pointer-events-none">
-              <div className="flex items-center gap-1 pointer-events-auto bg-[#1A1A1A]/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-neutral-800/60 shadow-xl">
-                <span className="text-[8.5px] font-sans uppercase text-neutral-600 font-bold tracking-wider mr-1.5">Energy</span>
-                {OFFICIAL_STATES.map(state => {
-                  const compState = selectedComponentId
-                    ? (canvasComponents.find(c => c.id === selectedComponentId)?.activeState ?? activeState)
-                    : activeState;
-                  const isActive = compState === state.id;
-                  return (
-                    <button key={state.id}
-                      onClick={() => handleStateClick(state.id)}
-                      title={state.description}
-                      className={`px-2.5 py-1 text-[8.5px] font-bold rounded-full cursor-pointer transition-all whitespace-nowrap border ${
-                        isActive
-                          ? 'bg-[#18A0FB] text-white border-[#18A0FB] shadow'
-                          : 'text-neutral-500 border-transparent hover:text-neutral-200 hover:border-neutral-700'
-                      }`}>
-                      {state.label.split(' ')[0]}
-                    </button>
-                  );
-                })}
+            {/* GLOBAL ENERGY STATE STRIP — shows only when component is selected */}
+            {selectedComponentId && (
+              <div className="absolute left-0 right-0 z-40 flex items-center justify-center pointer-events-none" style={{ bottom: 'calc(5rem + 12px)' }}>
+                <div className="flex flex-col items-center gap-0 pointer-events-auto">
+                  <div className="flex items-center bg-[#1E1E1E] border border-neutral-800 rounded-md overflow-hidden shadow-xl">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider px-3 border-r border-neutral-800">Energy</span>
+                    {OFFICIAL_STATES.map(state => {
+                      const compState = canvasComponents.find(c => c.id === selectedComponentId)?.activeState ?? 0;
+                      const isActive = compState === state.id;
+                      return (
+                        <button key={state.id}
+                          onClick={() => handleStateClick(state.id)}
+                          title={state.description}
+                          className={`text-[9.5px] font-sans px-3 h-8 flex items-center justify-center font-bold rounded-none transition-all cursor-pointer whitespace-nowrap ${
+                            isActive ? 'bg-[#18A0FB] text-white shadow' : 'text-neutral-400 hover:text-neutral-200'
+                          }`}>
+                          {state.label.split(' ')[0]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* =========================================================================================
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
@@ -4963,7 +4969,7 @@ figma.ui.onmessage = (msg) => {
                 </div>
 
                 {/* SIZE PRESET — only show for types that have presets */}
-                {M3_SIZE_PRESETS[activeComp.type as keyof typeof M3_SIZE_PRESETS] && (
+                {(M3_SIZE_PRESETS[activeComp.type as keyof typeof M3_SIZE_PRESETS] && !['card','dialog','sheets'].includes(activeComp.type)) && (
                 <div className="space-y-1.5 pb-3 border-b border-[#333]">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Size</span>
                   <div className="grid grid-cols-5 gap-1">
@@ -5002,43 +5008,44 @@ figma.ui.onmessage = (msg) => {
                       <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
                         <input type="range" min={field === 'height' ? 20 : 40} max={800} step={4}
                           value={(activeComp as any)[field]}
-                          onChange={(e) => updateActiveComponentField(field, Number(e.target.value))}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            updateActiveComponentField(field, val);
+                            if (field === 'width') updateActiveComponentField('sizeMode', 'fixed');
+                            if (field === 'height') updateActiveComponentField('heightMode', 'fixed');
+                          }}
                           className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]" />
                       </div>
                     </div>
                   ))}
-                  {/* Radius — M3 shape scale steps */}
+                  {/* Radius — M3 shape scale slider with snap stops */}
                   {(() => {
-                    const M3_RADII = [
-                      { label: 'None', value: 0 },
-                      { label: 'XS', value: 4 },
-                      { label: 'S', value: 8 },
-                      { label: 'M', value: 12 },
-                      { label: 'L', value: 16 },
-                      { label: 'L+', value: 20 },
-                      { label: 'XL', value: 28 },
-                      { label: 'XL+', value: 32 },
-                      { label: 'XXL', value: 48 },
-                      { label: 'Full', value: 9999 },
-                    ];
-                    const curR = activeComp.borderRadius;
-                    const closest = M3_RADII.reduce((a, b) => Math.abs(b.value - curR) < Math.abs(a.value - curR) ? b : a);
+                    const M3_RADII = [0, 4, 8, 12, 16, 20, 28, 32, 48, 999];
+                    const M3_LABELS: Record<number, string> = {0:'None',4:'XS',8:'S',12:'M',16:'L',20:'L+',28:'XL',32:'XL+',48:'XXL',999:'Full'};
+                    const curR = activeComp.borderRadius >= 999 ? 999 : activeComp.borderRadius;
+                    // Map slider position (0-9) to M3 value
+                    const sliderIdx = M3_RADII.reduce((best, v, i) => Math.abs(v - curR) < Math.abs(M3_RADII[best] - curR) ? i : best, 0);
                     return (
                       <div className="space-y-1">
                         <div className="flex justify-between items-center text-[9px] font-sans text-neutral-450">
                           <span className="uppercase font-bold tracking-wider">Radius</span>
-                          <span className="font-mono font-bold text-[#18A0FB]">{curR >= 9999 ? 'Full' : `${curR}px`} · {closest.label}</span>
+                          <span className="font-mono font-bold text-[#18A0FB]">{curR >= 999 ? '∞ Full' : `${curR}px`} <span className="text-neutral-600">· {M3_LABELS[M3_RADII[sliderIdx]]}</span></span>
                         </div>
-                        <div className="grid grid-cols-5 gap-1">
-                          {M3_RADII.map(r => (
-                            <button key={r.value}
-                              onClick={() => updateActiveComponentField('borderRadius', r.value)}
-                              className={`py-1 text-[8px] font-bold rounded cursor-pointer transition-all ${
-                                curR === r.value ? 'bg-[#18A0FB]/20 text-[#18A0FB] border border-[#18A0FB]/40' : 'bg-[#1E1E1E] text-neutral-500 hover:text-neutral-300 border border-transparent'
-                              }`}>
-                              {r.label}
-                            </button>
-                          ))}
+                        <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
+                          <input type="range" min="0" max="9" step="1"
+                            value={sliderIdx}
+                            onChange={(e) => {
+                              const v = M3_RADII[Number(e.target.value)];
+                              updateActiveComponentField('borderRadius', v >= 999 ? 9999 : v);
+                            }}
+                            className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
+                            list="m3-radius-stops" />
+                          <datalist id="m3-radius-stops">
+                            {M3_RADII.map((_,i) => <option key={i} value={i} />)}
+                          </datalist>
+                        </div>
+                        <div className="flex justify-between text-[7px] text-neutral-700 font-mono px-0.5">
+                          {M3_RADII.map((v,i) => <span key={i}>{v >= 999 ? '∞' : v}</span>)}
                         </div>
                       </div>
                     );
@@ -5110,19 +5117,35 @@ figma.ui.onmessage = (msg) => {
                 {(activeComp.configShowIcon || ['fab','avatar'].includes(activeComp.type)) && (
                   <div className="space-y-1.5 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Icon</span>
-                    <div className="grid grid-cols-5 gap-1">
-                      {['auto_awesome','volume_up','mic','play_arrow','favorite','bookmark','share','star','home','person','search','settings','notifications','mail','phone','camera','edit','delete','add','check'].map(icon => (
-                        <button key={icon}
-                          onClick={() => updateActiveComponentField('activeIcon', icon)}
-                          className={`h-8 flex items-center justify-center rounded cursor-pointer transition-all border ${
-                            (activeComp.activeIcon || 'volume_up') === icon
-                              ? 'bg-[#18A0FB]/20 border-[#18A0FB]/50 text-[#18A0FB]'
-                              : 'bg-[#1E1E1E] border-transparent text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
-                          }`}
-                          title={icon}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
-                        </button>
-                      ))}
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search icons..."
+                          defaultValue=""
+                          id="icon-search-input"
+                          className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9.5px] text-neutral-100 focus:border-[#18A0FB] outline-none"
+                          onChange={(e) => {
+                            const val = e.target.value.toLowerCase().replace(/ /g,'_');
+                            const grid = document.getElementById('icon-grid-container');
+                            if (grid) grid.setAttribute('data-filter', val);
+                          }}
+                        />
+                      </div>
+                      <div id="icon-grid-container" className="grid grid-cols-5 gap-1 max-h-32 overflow-y-auto">
+                        {['auto_awesome','volume_up','mic','play_arrow','favorite','bookmark','share','star','home','person','search','settings','notifications','mail','phone','camera','edit','delete','add','check','close','arrow_forward','arrow_back','expand_more','expand_less','refresh','download','upload','send','done','warning','error','info','help','lock','visibility','visibility_off','language','location_on','calendar_today','schedule','attach_file','link','image','video_file','music_note','palette','brush','flash_on','bolt','wb_sunny','dark_mode','cloud','wifi','bluetooth','battery_full','keyboard','mouse','smartphone','laptop','monitor','headphones','speaker','radio','tv','gamepad','toys','pets','nature','park','emoji_emotions','thumb_up','thumb_down','grade','workspace_premium','verified','security','admin_panel_settings','manage_accounts','group','groups','family_restroom','child_care','accessible','directions_run','fitness_center','sports','restaurant','local_cafe','shopping_cart','storefront','payments','credit_card','receipt','inventory','local_shipping','flight','hotel','map','explore','navigation','commute','electric_car','psychology','science','biotech','medical_services','monitor_heart'].map(icon => (
+                          <button key={icon}
+                            onClick={() => { updateActiveComponentField('activeIcon', icon); }}
+                            className={`h-8 flex items-center justify-center rounded cursor-pointer transition-all border ${
+                              (activeComp.activeIcon || 'volume_up') === icon
+                                ? 'bg-[#18A0FB]/20 border-[#18A0FB]/50 text-[#18A0FB]'
+                                : 'bg-[#1E1E1E] border-transparent text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
+                            }`}
+                            title={icon}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -5171,6 +5194,41 @@ figma.ui.onmessage = (msg) => {
                           {layout}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CARD ACTION BUTTONS CONFIG */}
+                {activeComp.type === 'card' && activeComp.configShowActions && (
+                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Action Buttons</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['Secondary','Action'] as const).map((which) => {
+                        const isSecondary = which === 'Secondary';
+                        const textField = isSecondary ? 'configSecondaryBtnText' : 'configActionBtnText';
+                        const variantField = isSecondary ? 'configSecondaryBtnVariant' : 'configActionBtnVariant';
+                        const defaultText = isSecondary ? 'Secondary' : 'Action';
+                        const defaultVariant = isSecondary ? 'outlined' : 'filled';
+                        return (
+                          <div key={which} className="space-y-1">
+                            <span className="text-[8px] text-neutral-500 uppercase font-bold">{which}</span>
+                            <input type="text"
+                              value={(activeComp as any)[textField] || defaultText}
+                              onChange={(e) => updateActiveComponentField(textField as any, e.target.value)}
+                              className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9px] text-neutral-100 focus:border-[#18A0FB] outline-none" />
+                            <select
+                              value={(activeComp as any)[variantField] || defaultVariant}
+                              onChange={(e) => updateActiveComponentField(variantField as any, e.target.value)}
+                              className="w-full bg-[#1A1A1A] text-neutral-200 border border-neutral-800 rounded px-1.5 py-1 text-[9px] focus:border-[#18A0FB] outline-none appearance-none cursor-pointer">
+                              <option value="filled">Filled</option>
+                              <option value="outlined">Outlined</option>
+                              <option value="tonal">Tonal</option>
+                              <option value="text">Text</option>
+                              <option value="elevated">Elevated</option>
+                            </select>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
