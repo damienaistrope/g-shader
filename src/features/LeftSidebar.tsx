@@ -1,4 +1,5 @@
 import React from 'react';
+import { M3_COLOR_LIBRARIES } from '../constants';
 import type { ComponentInstance, LinkedFigmaFile, SavedCombination } from '../types';
 import { Plus, Save, Share2, Trash2, Copy, ExternalLink, Link2, Pencil, Check, X, FolderHeart, ChevronDown, ChevronUp, Sun, Moon, Grid, RotateCcw, Upload, Image as ImageIcon, Layers, Move, Download, SlidersHorizontal, Sparkle, Brain, MessageSquare, Volume2, Sparkles, Activity } from 'lucide-react';
 
@@ -98,36 +99,6 @@ const PRESET_SCENES = [
   { id: 'dashboard' as const, label: 'Dashboard',       icon: 'dashboard' },
 ];
 
-export default function LeftSidebar({
-  savedCombinations, activeCombinationId, editingCombinationId,
-  editingCombinationName, onSaveComboOpen, onLoadCombination,
-  onDeleteCombination, onShareCombination, onStartRenaming,
-  onRenameChange, onRenameCommit, onRenameCancel, onNewCanvas, onOpenLayerLink,
-  linkedFigmaFiles, selectedFigmaFileId, onSetFigmaFileId, onOpenFigmaFileModal, onDeleteFigmaFile,
-  canvasComponents, selectedComponentId, onSelectComponent, onDeleteComponent,
-  onDuplicateComponent, onMoveLayer, onAddComponent,
-  canvasBgMode, gridVisible, isBackdropVisible, activeBackdrop,
-  uploadedFrameName, liveFrameUrl, backdropOpacity, backdropScale, backdropSolidColor,
-  onToggleBgMode, onToggleGrid, onToggleBackdrop, onSetBackdrop,
-  onUploadFrame, onSetLiveFrameUrl, onSetBackdropOpacity, onSetBackdropScale, onSetBackdropSolidColor,
-  onApplyPresetScene, onOpenPluginModal,
-  apiUrl, isEditingApiUrl, onSetApiUrl, onSetIsEditingApiUrl,
-  showToast,
-}: LeftSidebarProps) {
-  return (
-
-const SPECIMEN_TYPES = [
-  { type: 'card'     as const, label: 'Card',     icon: 'crop_landscape' },
-  { type: 'button'   as const, label: 'Button',   icon: 'smart_button' },
-  { type: 'chip'     as const, label: 'Chip',     icon: 'label' },
-  { type: 'fab'      as const, label: 'FAB',      icon: 'add_circle' },
-  { type: 'dialog'   as const, label: 'Dialog',   icon: 'chat_bubble' },
-  { type: 'badge'    as const, label: 'Badge',    icon: 'circle_notifications' },
-  { type: 'sheets'   as const, label: 'Sheet',    icon: 'bottom_panel_open' },
-  { type: 'avatar'   as const, label: 'Avatar',   icon: 'account_circle' },
-  { type: 'progress' as const, label: 'Progress', icon: 'linear_progress' },
-];
-
 export default function LeftSidebar(props: LeftSidebarProps) {
   const {
     savedCombinations, activeCombinationId, editingCombinationId, editingCombinationName,
@@ -154,7 +125,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
             {/* Action buttons list placed UNDER file title */}
             <div className="flex gap-1.5 pt-0.5">
               <button
-                onClick={handleCreateNewCanvas}
+                onClick={onNewCanvas}
                 className="flex-1 text-[10px] text-neutral-300 hover:text-white bg-[#1E1E1E] hover:bg-neutral-800 p-1.5 rounded flex items-center justify-center gap-1 transition-all cursor-pointer font-bold border border-neutral-800/80 outline-none"
                 title="Start a new blank spec view"
               >
@@ -162,7 +133,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                 <span>New</span>
               </button>
               <button
-                onClick={() => setIsSaveComboModalOpen(true)}
+                onClick={() => onSaveComboOpen()}
                 className="flex-1 text-[10px] text-neutral-300 hover:text-white bg-[#1E1E1E] hover:bg-[#1E1E1E]/80 hover:bg-neutral-800 p-1.5 rounded flex items-center justify-center gap-1 transition-all cursor-pointer font-bold border border-neutral-800/80 outline-none"
                 title="Save current layout block as combination"
               >
@@ -189,7 +160,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                       <div 
                         key={comb.id}
                         onClick={() => {
-                          if (!isNameEditing) handleLoadCombination(comb);
+                          if (!isNameEditing) onLoadCombination(comb);
                         }}
                         className={`group/combo flex items-center justify-between h-8 px-2 rounded text-xs transition-colors cursor-pointer border ${
                           isActive 
@@ -270,7 +241,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleShareCombination(comb, e);
+                              onShareCombination(comb, e);
                             }}
                             className="p-1 rounded bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 cursor-pointer border-none flex items-center justify-center"
                             title="Copy Share Web View URL"
@@ -280,7 +251,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteCombination(comb.id, e);
+                              onDeleteCombination(comb.id, e);
                             }}
                             className="p-1 rounded bg-neutral-800 text-rose-450 hover:text-rose-350 hover:bg-neutral-700 cursor-pointer border-none flex items-center justify-center"
                             title="Delete combination"
@@ -304,56 +275,56 @@ export default function LeftSidebar(props: LeftSidebarProps) {
             
             <div className="grid grid-cols-2 gap-1.5">
               <button 
-                onClick={() => handleAddNewComponent('card')}
+                onClick={() => onAddComponent('card')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Card</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('button')}
+                onClick={() => onAddComponent('button')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Button</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('chip')}
+                onClick={() => onAddComponent('chip')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Chip</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('fab')}
+                onClick={() => onAddComponent('fab')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>FAB</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('dialog')}
+                onClick={() => onAddComponent('dialog')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Dialog</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('sheets')}
+                onClick={() => onAddComponent('sheets')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Page Sheets</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('avatar')}
+                onClick={() => onAddComponent('avatar')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Avatar</span>
               </button>
               <button 
-                onClick={() => handleAddNewComponent('progress')}
+                onClick={() => onAddComponent('progress')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
@@ -394,7 +365,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMoveLayer(c.id, 'down');
+                            onMoveLayer(c.id, 'down');
                           }}
                           disabled={idx === 0}
                           className={`p-1 rounded bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 border-none outline-none cursor-pointer flex items-center justify-center ${
@@ -407,7 +378,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMoveLayer(c.id, 'up');
+                            onMoveLayer(c.id, 'up');
                           }}
                           disabled={idx === canvasComponents.length - 1}
                           className={`p-1 rounded bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 border-none outline-none cursor-pointer flex items-center justify-center ${
@@ -420,7 +391,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDuplicateComponent(c.id);
+                            onDuplicateComponent(c.id);
                           }}
                           className="p-1 rounded bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 border-none outline-none cursor-pointer flex items-center justify-center"
                           title="Duplicate layer"
@@ -430,7 +401,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteComponent(c.id);
+                            onDeleteComponent(c.id);
                           }}
                           className="p-1 rounded bg-neutral-800 text-rose-450 hover:text-rose-350 hover:bg-neutral-700 border-none outline-none cursor-pointer flex items-center justify-center"
                           title="Delete layer"
@@ -452,7 +423,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
               <div className="flex bg-[#1E1E1E] p-0.5 rounded border border-neutral-700/30 items-center justify-center h-8 self-start">
                 <button
                   onClick={() => {
-                    setCanvasBgMode('dark');
+                    onToggleBgMode();
                     showToast("Canvas Dark Mode Active.");
                   }}
                   className={`px-3 h-full rounded text-[9.5px] font-sans font-bold flex items-center gap-1.5 transition-all cursor-pointer border-none outline-none ${
@@ -465,7 +436,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                 </button>
                 <button
                   onClick={() => {
-                    setCanvasBgMode('light');
+                    onToggleBgMode();
                     showToast("Canvas Light Mode Active.");
                   }}
                   className={`px-3 h-full rounded text-[9.5px] font-sans font-bold flex items-center gap-1.5 transition-all cursor-pointer border-none outline-none ${
@@ -498,7 +469,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                       key={btn.mode}
                       onClick={() => {
                         setActiveBackdrop(btn.mode);
-                        setIsBackdropVisible(true);
+                        onToggleBackdrop();
                         showToast(`Backdrop state swapped: ${btn.label}`);
                       }}
                       className={`text-[9.5px] h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer border-none ${
@@ -603,7 +574,7 @@ export default function LeftSidebar(props: LeftSidebarProps) {
                     <input 
                       type="file" 
                       accept="image/*" 
-                      onChange={handleFileSelect} 
+                      onChange={onUploadFrame} 
                       className="hidden" 
                     />
                   </label>
