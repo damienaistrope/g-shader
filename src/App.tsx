@@ -3936,9 +3936,7 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className={`relative w-full h-full z-10 flex flex-col pointer-events-auto ${
-                        ['card','dialog','sheets'].includes(comp.type) ? 'items-stretch' : 'items-center justify-center'
-                      }`}
+                      className="relative w-full h-full z-10 flex flex-col pointer-events-auto items-center justify-center" style={{ isolation: "isolate", filter: "none" }}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
@@ -3969,115 +3967,75 @@ figma.ui.onmessage = function(msg) {
                       {/* SPECIMEN: CARD */}
                       {/* SPECIMEN: CARD */}
                       {comp.type === 'card' && (
-                        <M3Card
-                          variant={(comp.variant as any) || 'elevated'}
-                          layout={comp.layout || 'vertical'}
-                          className="h-full"
-                        >
-                          {(comp.layout || 'vertical') === 'vertical' ? (
-                            <>
-                              {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
-                                <M3CardHeader
-                                  avatar={comp.configShowIcon ? (
-                                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
-                                  ) : undefined}
-                                  header={comp.configShowTitle ? (
-                                    <span
-                                      contentEditable
-                                      suppressContentEditableWarning
-                                      onMouseDown={(e) => e.stopPropagation()}
-                                      onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
-                                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                      style={{ outline: 'none', cursor: 'text' }}
-                                    >
-                                      {comp.title}
-                                    </span>
-                                  ) : undefined}
-                                  subhead={comp.configShowSubtitle ? (
-                                    <span
-                                      contentEditable
-                                      suppressContentEditableWarning
-                                      onMouseDown={(e) => e.stopPropagation()}
-                                      onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
-                                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                      style={{ outline: 'none', cursor: 'text' }}
-                                    >
-                                      {comp.subtitle}
-                                    </span>
-                                  ) : undefined}
-                                  action={
-                                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)' }}>more_vert</span>
-                                  }
-                                />
-                              )}
-
-                              <M3CardMedia aspectRatio="custom" style={{ height: '120px' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '28px', color: 'var(--md-sys-color-outline)', opacity: 0.5 }}>image</span>
-                              </M3CardMedia>
-
-                              {comp.configShowDescription && (
-                                <M3CardContent
-                                  title={`${comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Elevated'} Card`}
-                                  subtitle="Material 3 • Today"
-                                >
-                                  <p
-                                    contentEditable
-                                    suppressContentEditableWarning
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                    style={{ outline: 'none', cursor: 'text' }}
-                                  >
-                                    {comp.text}
-                                  </p>
-                                </M3CardContent>
-                              )}
-
-                              {comp.configShowActions && (
-                                <M3CardActions>
-                                  <M3Button variant="outlined" size="s">Secondary</M3Button>
-                                  <M3Button variant="filled" size="s">Action</M3Button>
-                                </M3CardActions>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <M3CardHeader
-                                avatar={comp.configShowIcon ? (
+                        <div className={`md-card md-card--${comp.variant || 'elevated'} ${comp.layout === 'horizontal' ? 'md-card--horizontal' : ''}`}
+                          style={{ width: '100%', height: '100%', borderRadius: `${comp.borderRadius}px` }}>
+                          
+                          {/* Header */}
+                          {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
+                            <div className="md-card__header">
+                              {comp.configShowIcon && (
+                                <div className="md-card__avatar">
                                   <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
-                                ) : undefined}
-                                header={comp.configShowTitle ? (
-                                  <span
+                                </div>
+                              )}
+                              <div className="md-card__header-text">
+                                {comp.configShowTitle && (
+                                  <div className="md-card__header-title"
                                     contentEditable suppressContentEditableWarning
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
                                     style={{ outline: 'none', cursor: 'text' }}
-                                  >{comp.title}</span>
-                                ) : undefined}
-                                subhead={comp.configShowSubtitle ? (
-                                  <span
+                                  >{comp.title}</div>
+                                )}
+                                {comp.configShowSubtitle && (
+                                  <div className="md-card__header-subhead"
                                     contentEditable suppressContentEditableWarning
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
                                     style={{ outline: 'none', cursor: 'text' }}
-                                  >{comp.subtitle}</span>
-                                ) : undefined}
-                              />
-                              {comp.configShowDescription && (
-                                <M3CardContent>
-                                  <p contentEditable suppressContentEditableWarning
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                    style={{ outline: 'none', cursor: 'text' }}
-                                  >{comp.text}</p>
-                                </M3CardContent>
-                              )}
-                              <M3CardMedia aspectRatio="custom" style={{ width: '120px', flexShrink: 0 }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
-                              </M3CardMedia>
-                            </>
+                                  >{comp.subtitle}</div>
+                                )}
+                              </div>
+                              <div className="md-card__header-action">
+                                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)' }}>more_vert</span>
+                              </div>
+                            </div>
                           )}
-                        </M3Card>
+
+                          {/* Media */}
+                          <div className="md-card__media" style={{ height: '120px', flexShrink: 0 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '28px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                          </div>
+
+                          {/* Content */}
+                          {comp.configShowDescription && (
+                            <div className="md-card__content">
+                              <div className="md-card__content-header">
+                                <div className="md-card__content-title">
+                                  {comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Elevated'} Card
+                                </div>
+                                <div className="md-card__content-subtitle">Material 3 • Today</div>
+                              </div>
+                              <div className="md-card__content-body"
+                                contentEditable suppressContentEditableWarning
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
+                                style={{ outline: 'none', cursor: 'text' }}
+                              >{comp.text}</div>
+                            </div>
+                          )}
+
+                          {/* Actions */}
+                          {comp.configShowActions && (
+                            <div className="md-card__actions">
+                              <M3Button variant="outlined" size="s">Secondary</M3Button>
+                              <M3Button variant="filled" size="s">Action</M3Button>
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       {/* SPECIMEN: CHIP */}
@@ -4521,13 +4479,9 @@ figma.ui.onmessage = function(msg) {
   
                 {/* 2. Speed */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-0 flex-1 max-w-[140px]">
-                  <div className="flex items-center justify-between w-full gap-1.5">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
-                      Speed
-                    </span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">
-                      {intensity.toFixed(2)}×
-                    </span>
+                  <div className="flex items-center justify-between w-full gap-1">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0 hidden sm:block">Speed</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">{intensity.toFixed(2)}×</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2 select-none">
                     <input
@@ -4628,13 +4582,9 @@ figma.ui.onmessage = function(msg) {
    
                 {/* 6. Duration */}
                 <div className={`flex flex-col justify-between h-12 items-start transition-all duration-300 shrink-0 min-w-0 flex-1 max-w-[140px] ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <div className="flex items-center justify-between w-full gap-1.5">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
-                      Duration
-                    </span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">
-                      {exportDuration}s
-                    </span>
+                  <div className="flex items-center justify-between w-full gap-1">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0 hidden sm:block">Duration</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none shrink-0">{exportDuration}s</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2 select-none">
                     <input
