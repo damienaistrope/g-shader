@@ -414,6 +414,8 @@ interface InteractiveClick {
 export default function App() {
   const [canvasComponents, setCanvasComponents] = useState<ComponentInstance[]>([]);
   const [selectedComponentId, setSelectedComponentId] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [dragSelect, setDragSelect] = useState<{startX:number;startY:number;curX:number;curY:number} | null>(null);
   const activeComp = canvasComponents.find(c => c.id === selectedComponentId) as ComponentInstance | undefined;
   const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('baseline-blue');
 
@@ -497,6 +499,14 @@ export default function App() {
   // Listen for delete/backspace key globally to delete selected component
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete selected components
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).contentEditable === 'true')) return;
+        setCanvasComponents(prev => prev.filter(c => !selectedIds.has(c.id)));
+        setSelectedIds(new Set());
+        return;
+      }
       // Avoid deleting when user is typing inside input, select, or textarea
       const target = e.target as HTMLElement;
       if (
@@ -3531,12 +3541,52 @@ figma.ui.onmessage = function(msg) {
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
+          onMouseMove={(e) => {
+            if (!dragSelect) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const curX = e.clientX - rect.left;
+            const curY = e.clientY - rect.top;
+            setDragSelect(d => d ? { ...d, curX, curY } : null);
+          }}
+          onMouseUp={(e) => {
+            if (!dragSelect) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const selBox = {
+              left: Math.min(dragSelect.startX, dragSelect.curX),
+              top: Math.min(dragSelect.startY, dragSelect.curY),
+              right: Math.max(dragSelect.startX, dragSelect.curX),
+              bottom: Math.max(dragSelect.startY, dragSelect.curY),
+            };
+            if (selBox.right - selBox.left > 4 || selBox.bottom - selBox.top > 4) {
+              const canvasW = rect.width;
+              const canvasH = rect.height;
+              const newIds = new Set<string>();
+              canvasComponents.forEach(comp => {
+                const cx = canvasW / 2 + comp.x;
+                const cy = canvasH / 2 + comp.y;
+                const cl = cx - comp.width / 2;
+                const ct = cy - comp.height / 2;
+                const cr = cx + comp.width / 2;
+                const cb = cy + comp.height / 2;
+                if (cr > selBox.left && cl < selBox.right && cb > selBox.top && ct < selBox.bottom) {
+                  newIds.add(comp.id);
+                }
+              });
+              setSelectedIds(newIds);
+            }
+            setDragSelect(null);
+          }}
           data-theme={canvasBgMode}
           style={isBackdropVisible && activeBackdrop === 'solid' ? { backgroundColor: backdropSolidColor } : undefined}
           onMouseDown={(e) => {
             window.focus();
             if (e.target === e.currentTarget) {
               setSelectedComponentId('');
+              setSelectedIds(new Set());
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              setDragSelect({ startX: x, startY: y, curX: x, curY: y });
             }
             // Capturing click anywhere on/off components on the canvas
             const rect = e.currentTarget.getBoundingClientRect();
@@ -3660,7 +3710,23 @@ figma.ui.onmessage = function(msg) {
               </div>
             ) : (
               <div className="absolute inset-0 z-10 pointer-events-none">
-                {canvasComponents.map((comp) => {
+                {/* Drag-select box */}
+          {dragSelect && (
+            <div style={{
+              position: 'absolute',
+              left: Math.min(dragSelect.startX, dragSelect.curX),
+              top: Math.min(dragSelect.startY, dragSelect.curY),
+              width: Math.abs(dragSelect.curX - dragSelect.startX),
+              height: Math.abs(dragSelect.curY - dragSelect.startY),
+              border: '1.5px solid #18A0FB',
+              backgroundColor: 'rgba(24,160,251,0.08)',
+              pointerEvents: 'none',
+              zIndex: 999,
+              borderRadius: 2,
+            }} />
+          )}
+
+          {canvasComponents.map((comp) => {
                   const isSelected = selectedComponentId === comp.id;
                   // Resolve spec colors
                   const themeColors = getM3SpecificStyles(comp, canvasBgMode);
@@ -3762,7 +3828,7 @@ figma.ui.onmessage = function(msg) {
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
                       className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
-                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
+                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (selectedIds.has(comp.id) && !isRecording) ? 'ring-2 ring-[#18A0FB]/60 ring-offset-1 ring-offset-transparent z-25' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
                         left: `calc(50% + ${comp.x}px)`,
@@ -3966,77 +4032,34 @@ figma.ui.onmessage = function(msg) {
                       )}
 
                       {/* SPECIMEN: CARD */}
-                      {/* SPECIMEN: CARD */}
                       {comp.type === 'card' && (
-                        <div className={`md-card md-card--${comp.variant || 'elevated'} ${comp.layout === 'horizontal' ? 'md-card--horizontal' : ''}`}
-                          style={{ width: '100%', height: '100%', borderRadius: `${comp.borderRadius}px` }}>
-                          
-                          {/* Header */}
-                          {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
-                            <div className="md-card__header">
-                              {comp.configShowIcon && (
-                                <div className="md-card__avatar">
-                                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
-                                </div>
-                              )}
-                              <div className="md-card__header-text">
-                                {comp.configShowTitle && (
-                                  <div className="md-card__header-title"
-                                    contentEditable suppressContentEditableWarning
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
-                                    style={{ outline: 'none', cursor: 'text' }}
-                                  >{comp.title}</div>
-                                )}
-                                {comp.configShowSubtitle && (
-                                  <div className="md-card__header-subhead"
-                                    contentEditable suppressContentEditableWarning
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
-                                    style={{ outline: 'none', cursor: 'text' }}
-                                  >{comp.subtitle}</div>
-                                )}
-                              </div>
-                              <div className="md-card__header-action">
-                                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)' }}>more_vert</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Media */}
-                          <div className="md-card__media" style={{ height: '120px', flexShrink: 0 }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '28px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
-                          </div>
-
-                          {/* Content */}
+                        <M3Card
+                          variant={(comp.variant as any) || 'elevated'}
+                          layout={comp.layout || 'vertical'}
+                          className="w-full h-full"
+                          style={{ borderRadius: `${comp.borderRadius}px` } as any}
+                        >
+                          <M3CardHeader
+                            avatar={comp.configShowIcon ? <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span> : undefined}
+                            header={comp.configShowTitle ? comp.title || 'Card Title' : undefined}
+                            subhead={comp.configShowSubtitle ? comp.subtitle || 'Subtitle' : undefined}
+                            action={<span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)', cursor: 'pointer' }}>more_vert</span>}
+                          />
+                          <M3CardMedia aspectRatio="16/9">
+                            <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                          </M3CardMedia>
                           {comp.configShowDescription && (
-                            <div className="md-card__content">
-                              <div className="md-card__content-header">
-                                <div className="md-card__content-title">
-                                  {comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Elevated'} Card
-                                </div>
-                                <div className="md-card__content-subtitle">Material 3 • Today</div>
-                              </div>
-                              <div className="md-card__content-body"
-                                contentEditable suppressContentEditableWarning
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
-                                style={{ outline: 'none', cursor: 'text' }}
-                              >{comp.text}</div>
-                            </div>
+                            <M3CardContent title={`${comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Elevated'} Card`} subtitle="Material 3 • Today">
+                              {comp.text || 'Continuous wave rendering is active.'}
+                            </M3CardContent>
                           )}
-
-                          {/* Actions */}
                           {comp.configShowActions && (
-                            <div className="md-card__actions">
+                            <M3CardActions>
                               <M3Button variant="outlined" size="s">Secondary</M3Button>
                               <M3Button variant="filled" size="s">Action</M3Button>
-                            </div>
+                            </M3CardActions>
                           )}
-                        </div>
+                        </M3Card>
                       )}
 
                       {/* SPECIMEN: CHIP */}
