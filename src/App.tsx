@@ -3737,8 +3737,8 @@ figma.ui.onmessage = function(msg) {
 
                   // Compute physical card container blur (melts edges as per the API)
                   const energyBreath = isStateBlurred ? intensity : 0;
-                  const containerFilter = isStateBlurred ? `blur(${energyBreath * 0.8}px) saturate(${1 + energyBreath * 0.15})` : 'none';
-                  const containerScale = isStateBlurred ? `scale(${1 + energyBreath * 0.012})` : 'scale(1)';
+                  const containerFilter_DISABLED = isStateBlurred ? `blur(${energyBreath * 0.8}px) saturate(${1 + energyBreath * 0.15})` : 'none';
+                  const containerScale_DISABLED = isStateBlurred ? `scale(${1 + energyBreath * 0.012})` : 'scale(1)';
 
                   // Compute inner WebGL simulation canvas blur for fluid liquid bloom (shader itself computes localized edge blurs, so keep canvas sharp & details visible)
                   const innerCanvasFilter = isStateBlurred 
@@ -3802,7 +3802,7 @@ figma.ui.onmessage = function(msg) {
                     style={{
                       borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
                       transform: containerScale,
-                      filter: containerFilter,
+                      filter: 'none',
                       zIndex: 0,
                       overflow: 'hidden',
                     }}
@@ -3936,8 +3936,8 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className={`relative w-full h-full z-10 flex flex-col pointer-events-auto ${['card','dialog','sheets'].includes(comp.type) ? '' : 'items-center justify-center'}`}
-                      style={{ isolation: 'isolate', filter: 'none' }}
+                      className="relative w-full h-full z-10 pointer-events-auto"
+                      style={{ isolation: 'isolate', display: 'flex', flexDirection: 'column', alignItems: ['card','dialog','sheets'].includes(comp.type) ? 'stretch' : 'center', justifyContent: ['card','dialog','sheets'].includes(comp.type) ? 'flex-start' : 'center' }}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
