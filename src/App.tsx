@@ -194,6 +194,7 @@ interface ComponentInstance {
   iconImage?: string;
   avatarType?: 'icon' | 'initials' | 'image';
   avatarInitials?: string;
+  compIntensity?: number;  // per-component intensity override (0.1 - 2.0)
 }
 
 const M3_COLOR_LIBRARIES: Record<string, {
@@ -3291,31 +3292,38 @@ figma.ui.onmessage = (msg) => {
                     <span className="text-[9.5px] font-sans font-bold text-neutral-450 uppercase tracking-wider block mb-1.5">Colors</span>
                     <div className="flex items-center justify-between gap-1.5 w-full">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {/* Predefined Dynamic Colors and Custom Swatch together */}
+                        {/* All theme token colors — update when theme changes */}
                         {(() => {
                           const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['baseline-blue'];
+                          const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
+                          const lc = lib.colors.light;
+                          const dc = lib.colors.dark;
                           const swatches = [
-                            { hex: lib.colors.light.surface.bg, label: 'Theme Surface (Light)' },
-                            { hex: lib.colors.dark.surface.bg, label: 'Theme Surface (Dark)' }
+                            { hex: lc.primary.bg,   label: `Primary · Light · ${lc.primary.bg}` },
+                            { hex: dc.primary.bg,   label: `Primary · Dark · ${dc.primary.bg}` },
+                            { hex: lc.secondary.bg, label: `Secondary · Light · ${lc.secondary.bg}` },
+                            { hex: dc.secondary.bg, label: `Secondary · Dark · ${dc.secondary.bg}` },
+                            { hex: lc.surface.bg,   label: `Surface · Light · ${lc.surface.bg}` },
+                            { hex: dc.surface.bg,   label: `Surface · Dark · ${dc.surface.bg}` },
+                            { hex: lc.primary.text, label: `On-Primary · Light · ${lc.primary.text}` },
+                            { hex: dc.primary.text, label: `On-Primary · Dark · ${dc.primary.text}` },
                           ];
-                          return swatches.map((swatch) => (
+                          const seen = new Set<string>();
+                          const unique = swatches.filter(s => { const k = s.hex.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+                          return unique.map((swatch) => (
                             <button
-                              key={swatch.hex}
-                              onClick={() => {
-                                setBackdropSolidColor(swatch.hex);
-                                showToast(`Backdrop color set to ${swatch.label}`);
-                              }}
-                              className={`w-5 h-5 rounded-full border cursor-pointer relative ${
-                                backdropSolidColor.toLowerCase() === swatch.hex.toLowerCase() 
-                                  ? 'border-[#18A0FB] scale-105 shadow shadow-[#18A0FB]/10' 
-                                  : 'border-neutral-700 hover:border-neutral-500'
+                              key={swatch.label}
+                              onClick={() => { setBackdropSolidColor(swatch.hex); showToast(`Backdrop → ${swatch.label}`); }}
+                              className={`w-5 h-5 rounded-full border cursor-pointer relative transition-transform ${
+                                backdropSolidColor.toLowerCase() === swatch.hex.toLowerCase()
+                                  ? 'border-[#18A0FB] scale-110 shadow shadow-[#18A0FB]/20'
+                                  : 'border-neutral-700 hover:border-neutral-500 hover:scale-105'
                               }`}
                               style={{ backgroundColor: swatch.hex }}
-                              title={`${swatch.label} (${swatch.hex})`}
+                              title={swatch.label}
                             >
                               {backdropSolidColor.toLowerCase() === swatch.hex.toLowerCase() && (
-                                <span className="absolute inset-0 flex items-center justify-center text-[7px] text-white mix-blend-difference font-bold font-sans">✓</span>
+                                <span className="absolute inset-0 flex items-center justify-center text-[7px] text-white mix-blend-difference font-bold">✓</span>
                               )}
                             </button>
                           ));
@@ -3769,11 +3777,15 @@ figma.ui.onmessage = (msg) => {
                   // Compute physical card container blur (melts edges as per the API)
                   const containerFilter = 'none';
 
-                  // Compute inner WebGL simulation canvas blur for fluid liquid bloom (shader itself computes localized edge blurs, so keep canvas sharp & details visible)
-                  const innerCanvasFilter = isStateBlurred 
-                    ? `blur(${intensity * 1.5}px) saturate(1.15)` 
+                  // Per-component intensity: use comp override or global
+                  const compIntensity = comp.compIntensity ?? intensity;
+                  const isContainerSpecimen = ['card', 'dialog', 'sheets'].includes(comp.type);
+                  const effectiveIntensity = isContainerSpecimen ? compIntensity : compIntensity * 0.5;
+                  const innerCanvasFilter = isStateBlurred
+                    ? isContainerSpecimen
+                      ? `blur(${compIntensity * 3}px) saturate(1.25) brightness(1.05)`
+                      : `blur(${compIntensity * 0.8}px) saturate(1.1)`
                     : 'none';
-
                   // Material symbol icons
                   const rawIcon = comp.activeIcon || 'volume_up';
                   const localIcon = (rawIcon === 'sparkles' || rawIcon === 'sparkle' || rawIcon === 'auto_awesome') ? 'auto_awesome' : rawIcon;
@@ -3892,7 +3904,7 @@ figma.ui.onmessage = (msg) => {
                             endColorHex={compEndColor}
                             hoverActive={isHovered && isSelected}
                             renderMode={0}
-                            intensity={intensity}
+                            intensity={effectiveIntensity}
                             isActive={isAnimationActive}
                           />
                         </div>
@@ -4451,7 +4463,7 @@ figma.ui.onmessage = (msg) => {
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
                 ========================================================================================= */}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
-              <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-3 overflow-x-auto">
+              <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-2 overflow-x-auto">
 
                 {/* 1. Motion — Pause/Play */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0">
@@ -4466,15 +4478,15 @@ figma.ui.onmessage = (msg) => {
                 </div>
 
                 {/* 2. Speed slider */}
-                <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-[100px] max-w-[160px] flex-1">
+                <div className="flex flex-col justify-between h-12 items-start min-w-[60px] max-w-[200px] flex-1 @container">
                   <div className="flex items-center justify-between w-full gap-1">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden sm:block">Speed</span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{intensity.toFixed(2)}×</span>
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none @[80px]:block hidden">Speed</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none ml-auto">{intensity.toFixed(2)}×</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
                     <input type="range" min="0.10" max="1.50" step="0.05" value={intensity}
                       onChange={(e) => setIntensity(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0" />
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0 w-full" />
                   </div>
                 </div>
 
@@ -4521,15 +4533,15 @@ figma.ui.onmessage = (msg) => {
                 </div>
 
                 {/* 6. Duration slider */}
-                <div className={`flex flex-col justify-between h-12 items-start shrink-0 min-w-[100px] max-w-[160px] flex-1 transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
+                <div className={`flex flex-col justify-between h-12 items-start min-w-[60px] max-w-[200px] flex-1 @container transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
                   <div className="flex items-center justify-between w-full gap-1">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden sm:block">Duration</span>
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{exportDuration}s</span>
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none @[80px]:block hidden">Duration</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none ml-auto">{exportDuration}s</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
                     <input type="range" min="1" max="20" step="1" value={exportDuration}
                       onChange={(e) => setExportDuration(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0"
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0 w-full"
                       disabled={isRecording} />
                   </div>
                 </div>
@@ -4723,6 +4735,33 @@ figma.ui.onmessage = (msg) => {
             
             {!activeComp ? null : (
               {/* 2. Style & Type Specific Fields */}
+              <div className="flex flex-col gap-5">
+                {/* Energy Intensity per component */}
+                <div className="space-y-1.5 pb-3 border-b border-[#333333]">
+                  <div className="flex justify-between items-center text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
+                    <span>Energy Intensity</span>
+                    <span className="font-mono text-[10px] font-bold text-[#18A0FB]">
+                      {((activeComp.compIntensity ?? intensity) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="2.0"
+                      step="0.05"
+                      value={activeComp.compIntensity ?? intensity}
+                      onChange={(e) => updateActiveComponentField('compIntensity', Number(e.target.value))}
+                      className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
+                    />
+                  </div>
+                  <div className="flex justify-between text-[8px] text-neutral-600 font-mono px-0.5">
+                    <span>Subtle</span>
+                    <span className="text-neutral-500">{['card','dialog','sheets'].includes(activeComp.type) ? 'Large scale ↔' : 'Small scale ↔'}</span>
+                    <span>Max</span>
+                  </div>
+                </div>
+
                         <div className="space-y-2">
                           {/* 2a. Initials Entry (Only when initials is selected) */}
                           {(activeComp.avatarType === 'initials') && (
