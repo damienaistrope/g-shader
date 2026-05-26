@@ -1587,11 +1587,13 @@ figma.ui.onmessage = (msg) => {
             if (c.id === resizingComponentId) {
               const updated: Partial<ComponentInstance> = {};
               if (isResizing.includes('e')) {
-                updated.width = Math.max(80, Math.min(650, startWidth + deltaX));
+                const minW = ['card','dialog','sheets'].includes(c.type) ? 180 : ['button','chip'].includes(c.type) ? 72 : 48;
+                updated.width = Math.max(minW, Math.min(900, startWidth + deltaX));
                 updated.sizeMode = 'fixed';
               }
               if (isResizing.includes('s')) {
-                updated.height = Math.max(28, Math.min(500, startHeight + deltaY));
+                const minH = ['card','dialog','sheets'].includes(c.type) ? 120 : ['button'].includes(c.type) ? 36 : 28;
+                updated.height = Math.max(minH, Math.min(800, startHeight + deltaY));
                 updated.heightMode = 'fixed';
               }
               return {
@@ -3390,29 +3392,6 @@ figma.ui.onmessage = (msg) => {
                 </div>
               )}
 
-              {/* Custom Sliders: Opacity & scale */}
-              {activeBackdrop !== 'none' && isBackdropVisible && (
-                <div className="space-y-3 pt-2">
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
-                      <span>Opacity</span>
-                      <span className="font-mono text-[10px] font-bold text-[#18A0FB] leading-none">{Math.round(backdropOpacity * 100)}%</span>
-                    </div>
-                    <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
-                      <input 
-                        type="range"
-                        min="0.1"
-                        max="1.0"
-                        step="0.05"
-                        value={backdropOpacity}
-                        onChange={(e) => setBackdropOpacity(Number(e.target.value))}
-                        className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
-                      />
-                    </div>
-                  </div>
-
-                </div>
-              )}
             </div>
           </div>
 
@@ -3796,6 +3775,8 @@ figma.ui.onmessage = (msg) => {
                         filter: containerFilter
                       }}
                       onMouseDown={(e) => {
+                        // Don't intercept clicks on editable text — let them focus
+                        if ((e.target as HTMLElement).isContentEditable) return;
                         if (e.shiftKey) {
                           e.stopPropagation();
                           setSelectedIds(prev => {
@@ -3941,7 +3922,11 @@ figma.ui.onmessage = (msg) => {
                         ========================================================= */}
                     <div 
                       className="relative w-full h-full z-10 flex flex-col pointer-events-auto shrink-0 grow justify-center"
-                      onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
+                      onMouseDown={(e) => {
+                        // Don't intercept clicks on editable text
+                        if ((e.target as HTMLElement).isContentEditable) return;
+                        handleSpecimenClick(e, comp.id);
+                      }}
                     >
                       {/* SPECIMEN: BUTTON */}
                       {/* SPECIMEN: BUTTON */}
@@ -4473,31 +4458,6 @@ figma.ui.onmessage = (msg) => {
               </div>
             </div>
           )}
-
-            {/* GLOBAL ENERGY STATE STRIP — shows only when component is selected */}
-            {selectedComponentId && (
-              <div className="absolute left-0 right-0 z-40 flex items-center justify-center pointer-events-none" style={{ bottom: 'calc(5rem + 12px)' }}>
-                <div className="flex flex-col items-center gap-0 pointer-events-auto">
-                  <div className="flex items-center bg-[#1E1E1E] border border-neutral-800 rounded-md overflow-hidden shadow-xl">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider px-3 border-r border-neutral-800">Energy</span>
-                    {OFFICIAL_STATES.map(state => {
-                      const compState = canvasComponents.find(c => c.id === selectedComponentId)?.activeState ?? 0;
-                      const isActive = compState === state.id;
-                      return (
-                        <button key={state.id}
-                          onClick={() => handleStateClick(state.id)}
-                          title={state.description}
-                          className={`text-[9.5px] font-sans px-3 h-8 flex items-center justify-center font-bold rounded-none transition-all cursor-pointer whitespace-nowrap ${
-                            isActive ? 'bg-[#18A0FB] text-white shadow' : 'text-neutral-400 hover:text-neutral-200'
-                          }`}>
-                          {state.label.split(' ')[0]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* =========================================================================================
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
