@@ -382,11 +382,11 @@ const M3_SIZE_PRESETS = {
     xlarge: { width: 96, height: 96, borderRadius: 48 }
   },
   progress: {
-    xsmall: { width: 120, height: 4, borderRadius: 2 },
-    small: { width: 160, height: 4, borderRadius: 2 },
-    medium: { width: 200, height: 8, borderRadius: 4 },
-    large: { width: 240, height: 8, borderRadius: 4 },
-    xlarge: { width: 280, height: 12, borderRadius: 6 }
+    xsmall: { width: 160, height: 40, borderRadius: 4 },
+    small:  { width: 220, height: 40, borderRadius: 4 },
+    medium: { width: 280, height: 48, borderRadius: 4 },
+    large:  { width: 340, height: 48, borderRadius: 4 },
+    xlarge: { width: 400, height: 56, borderRadius: 4 }
   },
   card: {
     xsmall: { width: 180, height: 100, borderRadius: 8 },
@@ -3331,45 +3331,26 @@ figma.ui.onmessage = (msg) => {
                               )}
                             </button>
                           ));
+                          ;
                         })()}
+                          {/* Custom color — inline with theme swatches */}
+                          {(() => {
+                            const libKey2 = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
+                            const lib2 = (customLibraries[libKey2] || M3_COLOR_LIBRARIES[libKey2]) || M3_COLOR_LIBRARIES['baseline-blue'];
+                            const presetHexes = [lib2.colors.light.primary.bg,lib2.colors.dark.primary.bg,lib2.colors.light.secondary.bg,lib2.colors.dark.secondary.bg,lib2.colors.light.surface.bg,lib2.colors.dark.surface.bg,lib2.colors.light.primary.text,lib2.colors.dark.primary.text].map(h=>h.toLowerCase());
+                            const isCustomActive = !presetHexes.includes(backdropSolidColor.toLowerCase());
+                            return (
+                              <div
+                                className={`relative w-5 h-5 rounded-full overflow-hidden border flex items-center justify-center cursor-pointer transition-all shrink-0 ${isCustomActive?'border-[#18A0FB] scale-110':'border-neutral-700 hover:border-neutral-500'}`}
+                                style={isCustomActive?{backgroundColor:backdropSolidColor}:{backgroundImage:'linear-gradient(135deg,#ff0055,#ffdd00,#00ffaa,#00a2ff,#bb00ff)'}}
+                                title="Custom color">
+                                <input type="color" value={isCustomActive?backdropSolidColor:'#333333'}
+                                  onChange={(e)=>{setBackdropSolidColor(e.target.value);}}
+                                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"/>
+                              </div>
+                            );
+                          })()}
                       </div>
-
-                      {/* Custom color picker swatch with rainbow background prior to selection, solid + checkmark when active */}
-                      {(() => {
-                        const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
-                        const darkHex = lib.colors.dark.surface.bg;
-                        const lightHex = lib.colors.light.surface.bg;
-                        
-                        const isPresetSelected = backdropSolidColor.toLowerCase() === darkHex.toLowerCase() ||
-                                                 backdropSolidColor.toLowerCase() === lightHex.toLowerCase();
-                        const isCustomActive = !isPresetSelected;
-
-                        return (
-                          <div 
-                            className={`relative w-5 h-5 rounded-full overflow-hidden border flex items-center justify-center cursor-pointer transition-all duration-200 shrink-0 ${
-                              isCustomActive 
-                                ? 'border-[#18A0FB] scale-110 shadow shadow-[#18A0FB]/20 z-10' 
-                                : 'border-neutral-750 hover:border-neutral-550'
-                            }`}
-                            style={isCustomActive ? { backgroundColor: backdropSolidColor } : { backgroundImage: 'linear-gradient(135deg, #ff0055, #ffdd00, #00ffaa, #00a2ff, #bb00ff)' }}
-                            title="Choose custom background color"
-                          >
-                            <input 
-                              type="color" 
-                              value={isCustomActive ? backdropSolidColor : '#333333'} 
-                              onChange={(e) => {
-                                setBackdropSolidColor(e.target.value);
-                                showToast(`Backdrop color customized to: ${e.target.value}`);
-                              }}
-                              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-                            />
-                            {isCustomActive && (
-                              <span className="absolute inset-0 flex items-center justify-center text-[7.5px] text-white mix-blend-difference font-bold font-sans z-0 pointer-events-none">✓</span>
-                            )}
-                          </div>
-                        );
-                      })()}
                     </div>
                   </div>
                 </div>
@@ -3559,8 +3540,10 @@ figma.ui.onmessage = (msg) => {
           onMouseDown={(e) => {
             window.focus();
             if (e.target === e.currentTarget) {
-              setSelectedComponentId('');
-              setSelectedIds(new Set());
+              if (!e.shiftKey) {
+                setSelectedComponentId('');
+                setSelectedIds(new Set());
+              }
               // Start drag-select
               const rect = e.currentTarget.getBoundingClientRect();
               setDragSelect({ startX: e.clientX - rect.left, startY: e.clientY - rect.top, curX: e.clientX - rect.left, curY: e.clientY - rect.top });
@@ -3651,16 +3634,20 @@ figma.ui.onmessage = (msg) => {
           <div className="absolute inset-0 pb-20 z-10 pointer-events-none flex items-center justify-center">
             {canvasComponents.length === 0 ? (
               <div 
-                className={`pointer-events-auto text-center font-sans max-w-xs p-8 rounded-2xl border border-dashed transition-all duration-300 flex flex-col items-center gap-2 shadow-xs ${
-                  canvasBgMode === 'light'
-                    ? 'bg-[#FDFDFE] border-neutral-300 shadow-sm'
-                    : 'bg-[#121214]/60 border-neutral-800 shadow-lg'
-                }`}
+                className="pointer-events-auto text-center font-sans max-w-xs p-8 rounded-2xl flex flex-col items-center gap-2 transition-all duration-300"
+                style={{
+                  background: canvasBgMode === 'light'
+                    ? 'rgba(255,255,255,0.55)'
+                    : 'rgba(18,18,20,0.45)',
+                  backdropFilter: 'blur(20px) saturate(1.4)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+                  boxShadow: canvasBgMode === 'light'
+                    ? '0 4px 32px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.8)'
+                    : '0 4px 32px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.06)',
+                }}
               >
                 <div 
-                  className={`w-12 h-12 rounded-full border border-dashed flex items-center justify-center mb-1 ${
-                    canvasBgMode === 'light' ? 'border-neutral-300 bg-neutral-200/35' : 'border-neutral-800 bg-neutral-900/30'
-                  }`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 ${canvasBgMode === 'light' ? 'bg-neutral-200/50' : 'bg-neutral-800/50'}`}
                 >
                   <span 
                     className={`material-symbols-outlined text-[20px] select-none ${
@@ -3822,7 +3809,20 @@ figma.ui.onmessage = (msg) => {
                         background: 'transparent',
                         filter: containerFilter
                       }}
-                      onMouseDown={(e) => handleMoveStart(e, comp.id)}
+                      onMouseDown={(e) => {
+                        if (e.shiftKey) {
+                          e.stopPropagation();
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            if (next.has(comp.id)) next.delete(comp.id);
+                            else next.add(comp.id);
+                            return next;
+                          });
+                          return;
+                        }
+                        if (!selectedIds.has(comp.id)) setSelectedIds(new Set());
+                        handleMoveStart(e, comp.id);
+                      }}
                       onMouseMove={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = Math.round(e.clientX - rect.left);
@@ -3990,38 +3990,35 @@ figma.ui.onmessage = (msg) => {
                                     <span contentEditable suppressContentEditableWarning
                                       onMouseDown={(e) => e.stopPropagation()}
                                       onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
-                                      onKeyDown={(e) => { if (e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
-                                      style={{ outline: 'none', cursor: 'text', display: 'block' }}>
-                                      {comp.title}
-                                    </span>
+                                      onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                      style={{ outline:'none', cursor:'text', display:'block' }}>{comp.title}</span>
                                   ) : undefined}
                                   subhead={comp.configShowSubtitle ? (
                                     <span contentEditable suppressContentEditableWarning
                                       onMouseDown={(e) => e.stopPropagation()}
                                       onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
-                                      onKeyDown={(e) => { if (e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
-                                      style={{ outline: 'none', cursor: 'text', display: 'block' }}>
-                                      {comp.subtitle}
-                                    </span>
+                                      onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                      style={{ outline:'none', cursor:'text', display:'block' }}>{comp.subtitle}</span>
                                   ) : undefined}
-                                  action={<span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)', cursor: 'pointer' }}>more_vert</span>}
+                                  action={<span className="material-symbols-outlined" style={{ fontSize:'18px', color:'var(--md-sys-color-on-surface-variant)', cursor:'pointer' }}>more_vert</span>}
                                 />
                               )}
-                              <M3CardMedia aspectRatio="16/9">
-                                <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                              <M3CardMedia aspectRatio="16/9"
+                                src={comp.iconImage || undefined}
+                                style={comp.iconImage ? { backgroundSize:'cover', backgroundPosition:'center' } as React.CSSProperties : undefined}>
+                                {!comp.iconImage && (
+                                  <span className="material-symbols-outlined" style={{ fontSize:'32px', color:'var(--md-sys-color-outline)', opacity:0.4 }}>image</span>
+                                )}
                               </M3CardMedia>
                               {comp.configShowDescription && (
                                 <M3CardContent
                                   title={`${comp.variant ? comp.variant.charAt(0).toUpperCase()+comp.variant.slice(1) : 'Elevated'} Card`}
-                                  subtitle="Material 3 • Today"
-                                >
+                                  subtitle="Material 3 • Today">
                                   <span contentEditable suppressContentEditableWarning
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                    onKeyDown={(e) => { if (e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
-                                    style={{ outline: 'none', cursor: 'text' }}>
-                                    {comp.text}
-                                  </span>
+                                    onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                    style={{ outline:'none', cursor:'text' }}>{comp.text}</span>
                                 </M3CardContent>
                               )}
                               {comp.configShowActions && (
@@ -4032,19 +4029,21 @@ figma.ui.onmessage = (msg) => {
                               )}
                             </>
                           ) : (
+                            /* Horizontal: media on right, content on left */
                             <>
                               <M3CardHeader
-                                avatar={comp.configShowIcon ? (
-                                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
-                                ) : undefined}
                                 header={comp.configShowTitle ? comp.title : undefined}
                                 subhead={comp.configShowSubtitle ? comp.subtitle : undefined}
                               />
                               {comp.configShowDescription && (
                                 <M3CardContent>{comp.text}</M3CardContent>
                               )}
-                              <M3CardMedia aspectRatio="custom" style={{ width: '120px', flexShrink: 0, minHeight: '80px' } as React.CSSProperties}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                              <M3CardMedia aspectRatio="custom"
+                                src={comp.iconImage || undefined}
+                                style={{ width:'120px', flexShrink:0, minHeight:'80px' } as React.CSSProperties}>
+                                {!comp.iconImage && (
+                                  <span className="material-symbols-outlined" style={{ fontSize:'24px', color:'var(--md-sys-color-outline)', opacity:0.4 }}>image</span>
+                                )}
                               </M3CardMedia>
                             </>
                           )}
@@ -4146,7 +4145,11 @@ figma.ui.onmessage = (msg) => {
                             </div>
                           ) : undefined}
                         >
-                          {comp.variant === 'scrollable' ? (
+                          {comp.variant === 'alert' ? (
+                            <p style={{ color: 'var(--md-sys-color-on-surface-variant)', fontSize: 'var(--md-sys-typescale-body-medium-size)', lineHeight: 'var(--md-sys-typescale-body-medium-line-height)', fontFamily: 'var(--md-sys-typescale-body-medium-font)' }}>
+                              {comp.text || 'This action cannot be undone. Are you sure you want to continue?'}
+                            </p>
+                          ) : comp.variant === 'scrollable' ? (
                             /* Scrollable Account Selection List per Dialogue 3 spec */
                             <div className="flex flex-col gap-1.5 py-2.5 max-h-[160px] overflow-y-auto w-full text-left" id="dialog-scrollable-accounts">
                               <div className="flex items-center gap-4.5 px-1 py-1.5 rounded-lg hover:bg-neutral-800/10 dark:hover:bg-white/5 transition-colors cursor-pointer w-full">
@@ -4323,7 +4326,7 @@ figma.ui.onmessage = (msg) => {
                           );
                         } else if (avatarType === 'initials') {
                           return (
-                            <div style={{ ...avatarStyle, backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)', fontSize: Math.round(sz * 0.35), fontWeight: 500 }}>
+                            <div style={{ ...avatarStyle, backgroundColor: comp.iconBgColor || 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)', fontSize: Math.round(sz * 0.35), fontWeight: 500 }}>
                               {comp.avatarInitials || comp.title?.slice(0,2)?.toUpperCase() || 'AV'}
                             </div>
                           );
@@ -4643,6 +4646,15 @@ figma.ui.onmessage = (msg) => {
             </div>
           )}
 
+          {/* Multi-select indicator */}
+          {selectedIds.size > 1 && !isRecording && recordingCountdown === null && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-[#18A0FB] text-white text-[10px] font-sans font-bold uppercase tracking-wide px-3 py-1 rounded-full shadow-lg flex items-center gap-2 z-50 pointer-events-none select-none">
+              <span>{selectedIds.size} selected</span>
+              <span className="opacity-60">·</span>
+              <span>Delete to remove</span>
+            </div>
+          )}
+
           {/* Active Toast notifications */}
           {toastMessage && (
             <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#222222] text-white border-none px-4 py-2.5 rounded-lg text-xs font-sans shadow-2xl flex items-center gap-2 animate-fade-in z-[100] whitespace-nowrap">
@@ -4743,6 +4755,44 @@ figma.ui.onmessage = (msg) => {
             
             {!activeComp ? null : (
               <div className="flex flex-col gap-4">
+
+                {/* ENERGY STATES */}
+                <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Energy State</span>
+                    {(activeComp.activeState ?? 0) !== 0 && (
+                      <button onClick={() => {
+                        updateActiveComponentField('activeState', 0);
+                        updateActiveComponentField('previousState', activeComp.activeState ?? 0);
+                        updateActiveComponentField('transitionVal', 0.0);
+                      }} className="text-[8px] text-neutral-500 hover:text-neutral-300 font-bold uppercase cursor-pointer bg-transparent border-none">Reset</button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {OFFICIAL_STATES.map(state => {
+                      const isActive = (activeComp.activeState ?? 0) === state.id;
+                      return (
+                        <button key={state.id}
+                          onClick={() => {
+                            const cur = activeComp.activeState ?? 0;
+                            if (cur === state.id) {
+                              updateActiveComponentField('previousState', cur);
+                              updateActiveComponentField('activeState', 0);
+                            } else {
+                              updateActiveComponentField('previousState', cur);
+                              updateActiveComponentField('activeState', state.id);
+                            }
+                            updateActiveComponentField('transitionVal', 0.0);
+                          }}
+                          className={`py-1 px-1.5 text-[8px] font-bold rounded cursor-pointer uppercase transition-all text-center leading-tight ${
+                            isActive ? 'bg-[#18A0FB]/20 text-[#18A0FB] border border-[#18A0FB]/40' : 'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-200 border border-transparent'
+                          }`}>
+                          {state.label.split(' ')[0]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* ENERGY INTENSITY */}
                 <div className="space-y-1.5 pb-3 border-b border-[#333]">
@@ -4885,7 +4935,8 @@ figma.ui.onmessage = (msg) => {
                   )}
                 </div>
 
-                {/* SIZE PRESET */}
+                {/* SIZE PRESET — only show for types that have presets */}
+                {M3_SIZE_PRESETS[activeComp.type as keyof typeof M3_SIZE_PRESETS] && (
                 <div className="space-y-1.5 pb-3 border-b border-[#333]">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Size</span>
                   <div className="grid grid-cols-5 gap-1">
@@ -4909,6 +4960,7 @@ figma.ui.onmessage = (msg) => {
                     ))}
                   </div>
                 </div>
+                )}}
 
                 {/* DIMENSIONS */}
                 <div className="space-y-2 pb-3 border-b border-[#333]">
@@ -4948,16 +5000,111 @@ figma.ui.onmessage = (msg) => {
                   </div>
                 </div>
 
-                {/* ICON BG COLOR (for card/dialog avatar) */}
-                {(activeComp.configShowIcon && ['card','dialog'].includes(activeComp.type)) && (
+                {/* TEXT FIELDS */}
+                {(activeComp.configShowTitle || activeComp.configShowSubtitle || activeComp.configShowDescription) && (
+                  <div className="space-y-2 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Text</span>
+                    {activeComp.configShowTitle && (
+                      <div className="space-y-0.5">
+                        <span className="text-[8px] text-neutral-500 uppercase font-bold">Title</span>
+                        <input type="text" value={activeComp.title || ''}
+                          onChange={(e) => updateActiveComponentField('title', e.target.value)}
+                          className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-100 focus:border-[#18A0FB] outline-none font-sans" />
+                      </div>
+                    )}
+                    {activeComp.configShowSubtitle && (
+                      <div className="space-y-0.5">
+                        <span className="text-[8px] text-neutral-500 uppercase font-bold">Subtitle</span>
+                        <input type="text" value={activeComp.subtitle || ''}
+                          onChange={(e) => updateActiveComponentField('subtitle', e.target.value)}
+                          className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-100 focus:border-[#18A0FB] outline-none font-sans" />
+                      </div>
+                    )}
+                    {activeComp.configShowDescription && (
+                      <div className="space-y-0.5">
+                        <span className="text-[8px] text-neutral-500 uppercase font-bold">Body</span>
+                        <textarea value={activeComp.text || ''}
+                          onChange={(e) => updateActiveComponentField('text', e.target.value)}
+                          rows={2}
+                          className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-100 focus:border-[#18A0FB] outline-none font-sans resize-none" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ICON PICKER */}
+                {activeComp.configShowIcon && activeComp.type !== 'avatar' && (
+                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Icon</span>
+                    <div className="grid grid-cols-5 gap-1">
+                      {['auto_awesome','volume_up','mic','play_arrow','favorite','bookmark','share','star','home','person','search','settings','notifications','mail','phone','camera','edit','delete','add','check'].map(icon => (
+                        <button key={icon}
+                          onClick={() => updateActiveComponentField('activeIcon', icon)}
+                          className={`h-8 flex items-center justify-center rounded cursor-pointer transition-all border ${
+                            (activeComp.activeIcon || 'volume_up') === icon
+                              ? 'bg-[#18A0FB]/20 border-[#18A0FB]/50 text-[#18A0FB]'
+                              : 'bg-[#1E1E1E] border-transparent text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
+                          }`}
+                          title={icon}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CARD MEDIA IMAGE */}
+                {activeComp.type === 'card' && (
+                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Card Image</span>
+                    <div className="flex gap-1.5">
+                      <label htmlFor="card-media-upload" className="flex-1 py-1.5 px-2 bg-[#2C2C2C] hover:bg-[#333] text-neutral-300 rounded text-[9px] font-bold uppercase cursor-pointer text-center border border-neutral-700/50 transition-colors">
+                        {activeComp.iconImage ? 'Replace' : 'Upload Image'}
+                      </label>
+                      <input type="file" accept="image/*" id="card-media-upload" className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => updateActiveComponentField('iconImage', ev.target?.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      {activeComp.iconImage && (
+                        <button onClick={() => updateActiveComponentField('iconImage', undefined)}
+                          className="py-1.5 px-2 bg-red-950/25 hover:bg-red-900/30 text-red-400 rounded text-[9px] font-bold uppercase cursor-pointer border-none">
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {activeComp.iconImage && (
+                      <div className="rounded overflow-hidden h-16 bg-[#1E1E1E]">
+                        <img src={activeComp.iconImage} className="w-full h-full object-cover" alt="card media" />
+                      </div>
+                    )}
+                    {/* Card layout toggle */}
+                    <div className="flex gap-1 mt-1">
+                      {(['vertical','horizontal'] as const).map(layout => (
+                        <button key={layout}
+                          onClick={() => updateActiveComponentField('layout', layout)}
+                          className={`flex-1 py-1 text-[8.5px] font-bold uppercase rounded cursor-pointer transition-all ${(activeComp.layout||'vertical')===layout?'bg-[#18A0FB]/15 text-[#18A0FB]':'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-300'}`}>
+                          {layout}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ICON / AVATAR BG COLOR */}
+                {(activeComp.configShowIcon || activeComp.type === 'avatar') && (
                   <div className="flex items-center justify-between pb-3 border-b border-[#333]">
-                    <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">Icon Color</span>
+                    <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">{activeComp.type === 'avatar' ? 'Avatar BG' : 'Icon Color'}</span>
                     <div className="flex items-center gap-1.5 bg-[#1E1E1E] px-2 py-1 rounded border border-neutral-800">
                       <input type="color"
-                        value={activeComp.iconBgColor || '#222222'}
+                        value={activeComp.iconBgColor || (activeComp.type === 'avatar' ? '#0061A4' : '#222222')}
                         onChange={(e) => updateActiveComponentField('iconBgColor', e.target.value)}
                         className="w-4 h-4 border-none p-0 bg-transparent cursor-pointer rounded" />
-                      <span className="text-[8.5px] font-mono text-neutral-400">{activeComp.iconBgColor || '#222222'}</span>
+                      <span className="text-[8.5px] font-mono text-neutral-400">{activeComp.iconBgColor || (activeComp.type === 'avatar' ? '#0061A4' : '#222222')}</span>
                     </div>
                   </div>
                 )}
