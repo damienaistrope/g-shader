@@ -3669,7 +3669,7 @@ figma.ui.onmessage = (msg) => {
                     <div 
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
-                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
+                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 overflow-hidden ${
                         (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
@@ -3704,39 +3704,7 @@ figma.ui.onmessage = (msg) => {
                     </div>
                   )}
 
-                  {/* Dynamic organic ambient backdrop representing energy-derived motion blur, custom-modulated */}
-                  {isStateBlurred && (
-                    <div 
-                      className="absolute pointer-events-none transition-all duration-300"
-                      style={{
-                        left: '-100px',
-                        top: '-100px',
-                        width: 'calc(100% + 200px)',
-                        height: 'calc(100% + 200px)',
-                        maxWidth: 'none',
-                        filter: `blur(${intensity * 32 + 18}px) saturate(1.8) opacity(0.85)`,
-                        zIndex: -1
-                      }}
-                    >
-                      <ShaderRenderer
-                        canvasId={`canvas-bg-for-${comp.id}`}
-                        state={compState}
-                        previousState={compPreviousState}
-                        transition={compTransitionVal}
-                        width={comp.width}
-                        height={comp.height}
-                        borderRadius={comp.borderRadius}
-                        baseColorHex={compBgColor}
-                        midColorHex={compMidColor}
-                        endColorHex={compEndColor}
-                        hoverActive={isHovered && isSelected}
-                        renderMode={1}
-                        intensity={intensity}
-                        isActive={isAnimationActive}
-                      />
-                    </div>
-                  )}
-
+                  {/* Energy applied directly to component container */}
                   {/* DYNAMIC SHADER SURFACE CONTAINER - 100% PRISTINE */}
                   <div
                     className={`relative overflow-visible flex flex-col justify-between w-full ${comp.heightMode === 'auto' ? '' : 'h-full'}`}
@@ -3759,7 +3727,7 @@ figma.ui.onmessage = (msg) => {
                         ['--edge-br' as any]: `${comp.borderRadius}px`,
                         ['--intensity' as any]: intensity,
                         ['--intensity-multiplier' as any]: intensity,
-                        backgroundColor: compState !== 0 ? 'transparent' : (isElementSpecimen ? 'transparent' : compBgColor),
+                        backgroundColor: isElementSpecimen ? 'transparent' : compBgColor,
                         filter: (isBoundaryWarped && isAnimationActive) ? 'url(#m3-energy-warp-filter)' : 'none',
                         boxShadow: (isElementSpecimen && compState === 0)
                           ? 'none'
@@ -3785,7 +3753,9 @@ figma.ui.onmessage = (msg) => {
                             height: isBoundaryWarped ? 'calc(100% + 160px)' : '100%',
                             maxWidth: 'none',
                             filter: innerCanvasFilter,
-                            zIndex: 0
+                            zIndex: 0,
+                            mixBlendMode: 'overlay' as const,
+                            opacity: Math.min(1, 0.75 + intensity * 0.2),
                           }}
                         >
                           <ShaderRenderer
@@ -3809,21 +3779,16 @@ figma.ui.onmessage = (msg) => {
                     </div>
 
                     {/* Inline custom css style block for high-accuracy hardware click ripple rendering */}
-                    <style>{`
-                      @keyframes clickRippleAnimation {
-                        0% {
-                          transform: scale(0.4);
-                          opacity: 1;
-                        }
-                        100% {
-                          transform: scale(2.4);
-                          opacity: 0;
-                        }
-                      }
-                      .click-ripple-animate {
-                        animation: clickRippleAnimation 0.9s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
-                      }
-                    `}</style>
+                     <style>{`
+                       @keyframes clickRippleAnimation {
+                         0% { transform: scale(0.4); opacity: 1; }
+                         100% { transform: scale(2.4); opacity: 0; }
+                       }
+                       .click-ripple-animate {
+                         animation: clickRippleAnimation 0.9s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+                       }
+
+                     `}</style>
 
 
 
