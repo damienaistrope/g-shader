@@ -200,18 +200,33 @@ const M3_COLOR_LIBRARIES: Record<string, {
   name: string;
   colors: Record<'light' | 'dark', Record<'primary' | 'secondary' | 'surface', { bg: string; text: string; subtext: string; label: string }>>
 }> = {
-  'default-purple': {
+  'baseline-blue': {
+    name: 'Material Baseline Blue',
+    colors: {
+      light: {
+        primary: { bg: '#0061A4', text: '#FFFFFF', subtext: '#D1E4FF', label: 'Primary filled blue' },
+        secondary: { bg: '#D7E3F7', text: '#101C2B', subtext: '#3C4858', label: 'Secondary container' },
+        surface: { bg: '#FDFBFF', text: '#1A1C1E', subtext: '#44474E', label: 'Surface container' },
+      },
+      dark: {
+        primary: { bg: '#A8C8FF', text: '#003063', subtext: '#D6E3FF', label: 'Primary dark blue' },
+        secondary: { bg: '#3C4858', text: '#D8E3F8', subtext: '#BCC7DC', label: 'Secondary dark' },
+        surface: { bg: '#111318', text: '#E2E2E9', subtext: '#C4C6CF', label: 'Surface dark' },
+      }
+    }
+  },
+  'baseline-purple': {
     name: 'Material Baseline Purple',
     colors: {
       light: {
         primary: { bg: '#6750A4', text: '#FFFFFF', subtext: '#EADDFF', label: 'Primary filled purple' },
         secondary: { bg: '#E8DEF8', text: '#1D192B', subtext: '#49454F', label: 'Secondary container' },
-        surface: { bg: '#FEF7FF', text: '#1D1B20', subtext: '#49454F', label: 'Surface container' }
+        surface: { bg: '#FEF7FF', text: '#1D1B20', subtext: '#49454F', label: 'Surface container' },
       },
       dark: {
         primary: { bg: '#D0BCFF', text: '#381E72', subtext: '#381E72', label: 'Primary dark purple' },
         secondary: { bg: '#332D41', text: '#E8DEF8', subtext: '#CCC2DC', label: 'Secondary dark container' },
-        surface: { bg: '#141218', text: '#E6E1E5', subtext: '#938F99', label: 'Surface dark container' }
+        surface: { bg: '#141218', text: '#E6E1E5', subtext: '#938F99', label: 'Surface dark container' },
       }
     }
   },
@@ -400,7 +415,7 @@ export default function App() {
   const [canvasComponents, setCanvasComponents] = useState<ComponentInstance[]>([]);
   const [selectedComponentId, setSelectedComponentId] = useState<string>('');
   const activeComp = canvasComponents.find(c => c.id === selectedComponentId) as ComponentInstance | undefined;
-  const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('default-purple');
+  const [globalColorLibrary, setGlobalColorLibrary] = useState<string>('baseline-blue');
 
   // --- FIGMA FILES LINKING & VIEWS ---
   const [linkedFigmaFiles, setLinkedFigmaFiles] = useState<LinkedFigmaFile[]>(() => {
@@ -599,7 +614,7 @@ export default function App() {
     setBackdropScale(comb.backdropScale ?? 100);
     setIsBackdropVisible(comb.isBackdropVisible ?? true);
     setCanvasBgMode(comb.canvasBgMode || 'dark');
-    setGlobalColorLibrary(comb.globalColorLibrary || 'default-purple');
+    setGlobalColorLibrary(comb.globalColorLibrary || 'baseline-blue');
     setActiveState(comb.activeState || 2);
     setSelectedFigmaFileId(comb.figmaFileId || 'fig-1');
     setActiveCombinationId(comb.id);
@@ -954,7 +969,10 @@ figma.ui.onmessage = function(msg) {
       avatarType: 'icon',
       variant: type === 'button' ? 'filled' : type === 'card' ? 'elevated' : type === 'chip' ? 'assist' : type === 'fab' ? 'primary' : type === 'dialog' ? 'standard' : 'standard',
       sizeMode: 'auto',
-      heightMode: 'auto'
+      heightMode: 'auto',
+      activeState: 0,
+      previousState: 0,
+      transitionVal: 1.0,
     };
 
     setCanvasComponents(prev => [...prev, newComp]);
@@ -1324,11 +1342,11 @@ figma.ui.onmessage = function(msg) {
   const [newLibName, setNewLibName] = useState<string>('');
   
   // Custom Library Quick color pickers
-  const [newLibPrimaryLight, setNewLibPrimaryLight] = useState<string>('#6750A4');
+  const [newLibPrimaryLight, setNewLibPrimaryLight] = useState<string>('#0061A4');
   const [newLibSecondaryLight, setNewLibSecondaryLight] = useState<string>('#E8DEF8');
   const [newLibSurfaceLight, setNewLibSurfaceLight] = useState<string>('#FEF7FF');
 
-  const [newLibPrimaryDark, setNewLibPrimaryDark] = useState<string>('#D0BCFF');
+  const [newLibPrimaryDark, setNewLibPrimaryDark] = useState<string>('#A8C8FF');
   const [newLibSecondaryDark, setNewLibSecondaryDark] = useState<string>('#332D41');
   const [newLibSurfaceDark, setNewLibSurfaceDark] = useState<string>('#141218');
   
@@ -2209,14 +2227,14 @@ figma.ui.onmessage = function(msg) {
 
   // Resolve colors dynamically by component or defaults
   const getComponentColors = (c: ComponentInstance, mode: 'light' | 'dark') => {
-    const libKey = c.colorLibrary || globalColorLibrary || 'default-purple';
-    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+    const libKey = c.colorLibrary || globalColorLibrary || 'baseline-blue';
+    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
     return lib.colors[mode][c.containerType];
   };
 
   const getM3SpecificStyles = (comp: ComponentInstance, mode: 'light' | 'dark') => {
-    const libKey = comp.colorLibrary || globalColorLibrary || 'default-purple';
-    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+    const libKey = comp.colorLibrary || globalColorLibrary || 'baseline-blue';
+    const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
     const libColors = lib.colors[mode];
     
     let bg = libColors[comp.containerType]?.bg || '#ffffff';
@@ -3301,7 +3319,7 @@ figma.ui.onmessage = function(msg) {
                         {/* Predefined Dynamic Colors and Custom Swatch together */}
                         {(() => {
                           const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['default-purple'];
+                          const lib = M3_COLOR_LIBRARIES[libKey] || M3_COLOR_LIBRARIES['baseline-blue'];
                           const swatches = [
                             { hex: lib.colors.light.surface.bg, label: 'Theme Surface (Light)' },
                             { hex: lib.colors.dark.surface.bg, label: 'Theme Surface (Dark)' }
@@ -3332,7 +3350,7 @@ figma.ui.onmessage = function(msg) {
                       {/* Custom color picker swatch with rainbow background prior to selection, solid + checkmark when active */}
                       {(() => {
                         const libKey = activeComp ? (activeComp.colorLibrary || globalColorLibrary) : globalColorLibrary;
-                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+                        const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
                         const darkHex = lib.colors.dark.surface.bg;
                         const lightHex = lib.colors.light.surface.bg;
                         
@@ -3653,8 +3671,8 @@ figma.ui.onmessage = function(msg) {
                   const compShadow = themeColors.shadow;
                   const hasBaseShaderBg = themeColors.hasBaseShaderBg;
 
-                  const libKey = comp.colorLibrary || globalColorLibrary || 'default-purple';
-                  const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['default-purple'];
+                  const libKey = comp.colorLibrary || globalColorLibrary || 'baseline-blue';
+                  const lib = (customLibraries[libKey] || M3_COLOR_LIBRARIES[libKey]) || M3_COLOR_LIBRARIES['baseline-blue'];
                   const libColors = lib.colors[canvasBgMode];
 
                   const compState = comp.activeState !== undefined ? comp.activeState : 0;
@@ -3749,15 +3767,13 @@ figma.ui.onmessage = function(msg) {
                       style={{
                         left: `calc(50% + ${comp.x}px)`,
                         top: `calc(50% + ${comp.y}px)`,
-                        transform: `translate(-50%, -50%) ${containerScale ?? 'scale(1)'}`,
-                        transition: 'transform 0.4s cubic-bezier(0.2,0,0,1), filter 0.4s cubic-bezier(0.2,0,0,1)',
+                        transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
                         height: comp.heightMode === 'auto' ? 'auto' : `${comp.height}px`,
                         minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
                         minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
-                        boxShadow: dynamicGlow,
-                        filter: containerFilter
+                        boxShadow: dynamicGlow
                       }}
                       onMouseDown={(e) => handleMoveStart(e, comp.id)}
                       onMouseMove={(e) => {
@@ -3779,6 +3795,18 @@ figma.ui.onmessage = function(msg) {
                     </div>
                   )}
 
+                  {/* ── ENERGY + SURFACE LAYER — acts as one unit ── */}
+                  {/* Content sits in a separate z-layer above and is never blurred */}
+                  <div
+                    className="absolute inset-0 pointer-events-none transition-[filter,transform] duration-500"
+                    style={{
+                      borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
+                      transform: containerScale,
+                      filter: containerFilter,
+                      zIndex: 0,
+                      overflow: 'hidden',
+                    }}
+                  >
                   {/* Dynamic organic ambient backdrop representing energy-derived motion blur, custom-modulated */}
                   {isStateBlurred && (
                     <div 
@@ -3850,7 +3878,7 @@ figma.ui.onmessage = function(msg) {
                       }}
                     >
                       {/* GLSL dynamic webgl fluid wave rendering canvas wrapper with dynamic bleed and blur inside the active background container */}
-                      {hasBaseShaderBg && compState !== 0 && (
+                      {hasBaseShaderBg && compState !== 0 && !isElementSpecimen && (
                         <div 
                           className="absolute pointer-events-none transition-all duration-300"
                           style={{
@@ -3902,6 +3930,8 @@ figma.ui.onmessage = function(msg) {
 
 
 
+
+                  </div>
                     {/* =========================================================
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
@@ -4203,10 +4233,6 @@ figma.ui.onmessage = function(msg) {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              ...(compState !== 0 ? {
-                                backgroundColor: 'transparent',
-                                boxShadow: 'none',
-                              } : {})
                             }}
                           />
                         </div>
@@ -4450,8 +4476,8 @@ figma.ui.onmessage = function(msg) {
                       {comp.type === 'avatar' && (
                         <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
                           <M3Avatar 
-                            src={(comp.variant === 'image') ? (comp.iconImage || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop") : undefined}
-                            initials={(comp.variant === 'initials' || !comp.variant) ? comp.text : undefined}
+                            src={(comp.avatarType === 'image') ? (comp.iconImage || undefined) : undefined}
+                            initials={comp.avatarType === 'initials' ? (comp.avatarInitials || comp.text || 'A') : (comp.avatarType === 'icon' ? undefined : (comp.text || 'A'))}
                             size={comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'medium' ? 'medium' : 'large'}
                             className="w-full h-full rounded-full"
                             style={{
@@ -4471,18 +4497,16 @@ figma.ui.onmessage = function(msg) {
                         <div className="w-full h-full flex flex-col items-center justify-center p-3" style={{ borderRadius: 'inherit' }}>
                           {comp.variant === 'circular' ? (
                             <M3CircularProgress 
-                              indeterminate={true} 
+                              indeterminate={compState === 0 || true} 
+                              value={0.65}
                               variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'} 
-                              energyColorStart={compMidColor}
-                              energyColorEnd={compEndColor}
                             />
                           ) : (
                             <div className="w-full">
                               <M3LinearProgress 
-                                indeterminate={true} 
+                                indeterminate={compState === 0 || true} 
+                                value={0.65}
                                 variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'} 
-                                energyColorStart={compMidColor}
-                                energyColorEnd={compEndColor}
                               />
                             </div>
                           )}
