@@ -3979,16 +3979,14 @@ figma.ui.onmessage = function(msg) {
                         <M3Card 
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
-                          className="w-full bg-transparent! shadow-none! border-none! flex"
+                          className="w-full"
                           style={{
-                            flexDirection: (comp.layout || 'vertical') === 'horizontal' ? 'row' : 'column',
-                            justifyContent: 'space-between'
+                            height: '100%',
+                            borderRadius: `${comp.borderRadius}px`,
                           }}
                         >
                           {(comp.layout || 'vertical') === 'vertical' ? (
                             <>
-                              {/* Vertical Card Structure */}
-                              <div className="flex flex-col">
                                 {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
                                   <M3CardHeader
                                     avatar={comp.configShowIcon ? (
@@ -4065,27 +4063,12 @@ figma.ui.onmessage = function(msg) {
                                     </p>
                                   </M3CardContent>
                                 )}
-                              </div>
 
                               {comp.configShowActions && (
                                 <M3CardActions>
-                                  <div className="flex justify-end items-center gap-2 shrink-0 pt-2 border-t border-white/5 select-none w-full px-4 pb-4">
-                                    <M3Button 
-                                      variant="outlined" 
-                                      size="s"
-                                      className="rounded-full"
-                                      style={{ color: libColors.primary.bg, borderColor: libColors.primary.bg }}
-                                    >
-                                      Secondary
-                                    </M3Button>
-                                    <M3Button 
-                                      variant="filled" 
-                                      size="s"
-                                      className="rounded-full"
-                                      style={{ backgroundColor: libColors.primary.bg, color: libColors.primary.text }}
-                                    >
-                                      Action
-                                    </M3Button>
+                                  <div className="flex justify-end items-center gap-2 w-full select-none">
+                                    <M3Button variant="outlined" size="s">Secondary</M3Button>
+                                    <M3Button variant="filled" size="s">Action</M3Button>
                                   </div>
                                 </M3CardActions>
                               )}
