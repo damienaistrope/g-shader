@@ -499,6 +499,14 @@ export default function App() {
   // Listen for delete/backspace key globally to delete selected component
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Multi-select delete
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
+        const el = document.activeElement as HTMLElement;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) return;
+        setCanvasComponents(prev => prev.filter(c => !selectedIds.has(c.id)));
+        setSelectedIds(new Set());
+        return;
+      }
       // Avoid deleting when user is typing inside input, select, or textarea
       const target = e.target as HTMLElement;
       if (
@@ -1333,6 +1341,9 @@ figma.ui.onmessage = (msg) => {
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingCount, setRecordingCount] = useState<number>(0);
+  const [recordingElapsedMs, setRecordingElapsedMs] = useState<number>(0);
+  const recordingStartTimeRef = useRef<number>(0);
+  const recordingTimerRef = useRef<any>(null);
   const [isRecordOptionsDialogOpen, setIsRecordOptionsDialogOpen] = useState<boolean>(false);
   const [compiledFile, setCompiledFile] = useState<{ url: string; filename: string; extension: string } | null>(null);
 
@@ -2503,6 +2514,22 @@ figma.ui.onmessage = (msg) => {
       ctx.fillStyle = bgFill;
       ctx.fillRect(0, 0, finalW, finalH);
 
+      // Draw uploaded or live backdrop image if active
+      if (isBackdropVisible && (activeBackdrop === 'uploaded' || activeBackdrop === 'live')) {
+        const imgEl = document.querySelector('.backdrop-image-source') as HTMLImageElement;
+        if (imgEl && imgEl.complete) {
+          ctx.save();
+          ctx.globalAlpha = backdropOpacity;
+          const scale = backdropScale;
+          const dw = finalW * scale;
+          const dh = finalH * scale;
+          const dx = (finalW - dw) / 2;
+          const dy = (finalH - dh) / 2;
+          ctx.drawImage(imgEl, dx, dy, dw, dh);
+          ctx.restore();
+        }
+      }
+
       ctx.save();
       // Apply resolution upscaling
       ctx.scale(recordResolutionMultiplier, recordResolutionMultiplier);
@@ -2636,6 +2663,11 @@ figma.ui.onmessage = (msg) => {
         setExportStatus('Arming video recording stream...');
         setIsRecording(true);
         setRecordingCount(0);
+        setRecordingElapsedMs(0);
+        recordingStartTimeRef.current = Date.now();
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingElapsedMs(Date.now() - recordingStartTimeRef.current);
+        }, 100);
 
         // Render first frame
         renderCompFrame();
@@ -2677,6 +2709,8 @@ figma.ui.onmessage = (msg) => {
           
           setExportStatus(null);
           setIsRecording(false);
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+        setRecordingElapsedMs(0);
           setIsRecordingPaused(false);
           activeMediaRecorderRef.current = null;
           
@@ -2737,6 +2771,11 @@ figma.ui.onmessage = (msg) => {
         setExportStatus('Recording snapshots...');
         setIsRecording(true);
         setRecordingCount(0);
+        setRecordingElapsedMs(0);
+        recordingStartTimeRef.current = Date.now();
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingElapsedMs(Date.now() - recordingStartTimeRef.current);
+        }, 100);
 
         const snapshots: string[] = [];
         const totalFramesCount = Math.round(recordFPS * exportDuration);
@@ -3465,6 +3504,31 @@ figma.ui.onmessage = (msg) => {
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
+          onMouseMove={(e) => {
+            if (!dragSelect) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            setDragSelect(d => d ? { ...d, curX: e.clientX - rect.left, curY: e.clientY - rect.top } : null);
+          }}
+          onMouseUp={(e) => {
+            if (!dragSelect) { return; }
+            const rect = e.currentTarget.getBoundingClientRect();
+            const sx = Math.min(dragSelect.startX, dragSelect.curX);
+            const sy = Math.min(dragSelect.startY, dragSelect.curY);
+            const ex = Math.max(dragSelect.startX, dragSelect.curX);
+            const ey = Math.max(dragSelect.startY, dragSelect.curY);
+            if (ex - sx > 8 || ey - sy > 8) {
+              const cw = rect.width; const ch = rect.height;
+              const newIds = new Set<string>();
+              canvasComponents.forEach(comp => {
+                const cx = cw/2 + comp.x; const cy = ch/2 + comp.y;
+                const cl = cx - comp.width/2; const ct = cy - comp.height/2;
+                const cr = cx + comp.width/2; const cb = cy + comp.height/2;
+                if (cr > sx && cl < ex && cb > sy && ct < ey) newIds.add(comp.id);
+              });
+              setSelectedIds(newIds);
+            }
+            setDragSelect(null);
+          }}
           data-theme={canvasBgMode}
           style={{
             ...(isBackdropVisible && activeBackdrop === 'solid' ? { backgroundColor: backdropSolidColor } : {}),
@@ -3484,6 +3548,10 @@ figma.ui.onmessage = (msg) => {
             window.focus();
             if (e.target === e.currentTarget) {
               setSelectedComponentId('');
+              setSelectedIds(new Set());
+              // Start drag-select
+              const rect = e.currentTarget.getBoundingClientRect();
+              setDragSelect({ startX: e.clientX - rect.left, startY: e.clientY - rect.top, curX: e.clientX - rect.left, curY: e.clientY - rect.top });
             }
             // Capturing click anywhere on/off components on the canvas
             const rect = e.currentTarget.getBoundingClientRect();
@@ -3607,7 +3675,23 @@ figma.ui.onmessage = (msg) => {
               </div>
             ) : (
               <div className="absolute inset-0 z-10 pointer-events-none">
-                {canvasComponents.map((comp) => {
+                {/* Multi-select drag box */}
+          {dragSelect && (
+            <div style={{
+              position: 'absolute',
+              left: Math.min(dragSelect.startX, dragSelect.curX),
+              top: Math.min(dragSelect.startY, dragSelect.curY),
+              width: Math.abs(dragSelect.curX - dragSelect.startX),
+              height: Math.abs(dragSelect.curY - dragSelect.startY),
+              border: '1.5px solid #18A0FB',
+              backgroundColor: 'rgba(24,160,251,0.08)',
+              pointerEvents: 'none',
+              zIndex: 999,
+              borderRadius: 2,
+            }} />
+          )}
+
+          {canvasComponents.map((comp) => {
                   const isSelected = selectedComponentId === comp.id;
                   // Resolve spec colors
                   const themeColors = getM3SpecificStyles(comp, canvasBgMode);
@@ -3707,7 +3791,7 @@ figma.ui.onmessage = (msg) => {
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
                       className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
-                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
+                        (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (selectedIds.has(comp.id) && !isRecording) ? 'ring-2 ring-[#18A0FB]/50 ring-offset-1 ring-offset-transparent z-25' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
                         left: `calc(50% + ${comp.x}px)`,
@@ -4453,7 +4537,11 @@ figma.ui.onmessage = (msg) => {
                 {/* 7. Action bundle: Capture Spec & Recording active sub-controllers */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
-                    {isRecording ? 'Rec Controls' : 'Record'}
+                    {isRecording ? (
+                    <span className="font-mono text-[#ef4444]">
+                      ⏺ {Math.floor(recordingElapsedMs/60000).toString().padStart(2,'0')}:{Math.floor((recordingElapsedMs%60000)/1000).toString().padStart(2,'0')}.{Math.floor((recordingElapsedMs%1000)/100)}
+                    </span>
+                  ) : 'Record'}
                   </span>
                   {isRecording ? (
                     <div className="h-[28px] flex items-center gap-2">
@@ -4519,9 +4607,19 @@ figma.ui.onmessage = (msg) => {
 
           {/* STEP 2: Timer Countdown toast instead of full screen takeover */}
           {recordingCountdown !== null && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#2C2C2C] text-white border border-neutral-700/50 px-4 py-2.5 rounded-lg text-xs font-sans shadow-2xl flex items-center gap-3 z-50 whitespace-nowrap">
-              <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-normal font-mono text-xs shrink-0 animate-pulse">{recordingCountdown}</span>
-              <span className="font-semibold text-[11px] uppercase tracking-wide text-white animate-pulse">Recording</span>
+            <div className="absolute inset-0 z-[90] flex items-center justify-center pointer-events-none">
+              <div className="flex flex-col items-center gap-3 animate-pulse">
+                <div className={`w-28 h-28 rounded-full flex items-center justify-center shadow-2xl border-4 ${
+                  recordingCountdown === 3 ? 'bg-red-500/90 border-red-400' :
+                  recordingCountdown === 2 ? 'bg-orange-500/90 border-orange-400' :
+                  'bg-green-500/90 border-green-400'
+                }`}>
+                  <span className="text-white font-black text-6xl leading-none font-mono">{recordingCountdown}</span>
+                </div>
+                <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full">
+                  {recordingCountdown === 1 ? 'Go!' : 'Get ready...'}
+                </span>
+              </div>
             </div>
           )}
 
