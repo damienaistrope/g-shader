@@ -3132,7 +3132,7 @@ figma.ui.onmessage = (msg) => {
               </button>
               <button
                 onClick={() => handleAddNewComponent('image')}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white transition-colors text-[10px] font-sans text-neutral-300 select-none cursor-pointer border-none group"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white transition-colors text-[10px] font-sans font-medium text-neutral-300 select-none cursor-pointer border-none group"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Image</span>
@@ -3771,7 +3771,7 @@ figma.ui.onmessage = (msg) => {
                   // Font styles
                   const titleFont = M3_FONT_STYLES[comp.fontStyleTitle] || (comp.type === 'card' ? M3_FONT_STYLES.titleMedium : M3_FONT_STYLES.titleLarge);
                   const descFont = M3_FONT_STYLES[comp.fontStyleText] || M3_FONT_STYLES.bodyMedium;
-                  const isElementSpecimen = ['button', 'chip', 'fab', 'badge', 'avatar', 'progress'].includes(comp.type);
+                  const isElementSpecimen = ['button', 'chip', 'fab', 'badge', 'avatar', 'progress', 'image'].includes(comp.type);
 
                   return (
                     <div 
@@ -4081,7 +4081,7 @@ figma.ui.onmessage = (msg) => {
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
                             <M3FAB
-                              icon={localIcon}
+                              icon={comp.configShowIcon !== false ? localIcon : undefined}
                               label={isExtended ? (comp.text || 'Action') : undefined}
                               variant={(comp.variant === 'extended' ? 'primary' : comp.variant as any) || 'primary'}
                               size={isExtended ? 'extended' : fabSize}
@@ -4335,22 +4335,50 @@ figma.ui.onmessage = (msg) => {
                         }
                       })()}
 
-                      {/* SPECIMEN: IMAGE */}
+                      {/* SPECIMEN: IMAGE — full bleed, energy on top via mix-blend-mode */}
                       {comp.type === 'image' && (
                         <div style={{
                           width: '100%', height: '100%',
-                          borderRadius: `${comp.borderRadius}px`,
-                          overflow: 'hidden',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          backgroundColor: 'var(--md-sys-color-surface-variant)',
                           position: 'relative',
+                          overflow: 'hidden',
+                          borderRadius: `${comp.borderRadius}px`,
+                          backgroundColor: 'var(--md-sys-color-surface-variant)',
                         }}>
                           {comp.iconImage ? (
                             <img src={comp.iconImage} alt="component"
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                               referrerPolicy="no-referrer" />
                           ) : (
-                            <span className="material-symbols-outlined" style={{ fontSize: 32, color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 32, color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                            </div>
+                          )}
+                          {/* Energy overlay — sits on top of the image with screen blend */}
+                          {compState !== 0 && isAnimationActive && (
+                            <div style={{
+                              position: 'absolute', inset: 0,
+                              mixBlendMode: 'screen',
+                              opacity: effectiveIntensity * 0.7,
+                              pointerEvents: 'none',
+                              zIndex: 2,
+                            }}>
+                              <ShaderRenderer
+                                canvasId={`canvas-for-energy-${comp.id}`}
+                                state={compState}
+                                previousState={compPreviousState}
+                                transition={compTransitionVal}
+                                width={comp.width}
+                                height={comp.height}
+                                borderRadius={comp.borderRadius}
+                                baseColorHex={compBgColor}
+                                midColorHex={compMidColor}
+                                endColorHex={compEndColor}
+                                hoverActive={false}
+                                renderMode={0}
+                                intensity={effectiveIntensity}
+                                isActive={isAnimationActive}
+                              />
+                            </div>
                           )}
                         </div>
                       )}
@@ -4571,55 +4599,41 @@ figma.ui.onmessage = (msg) => {
                 </div>
 
                 {/* 7. Action bundle: Capture Spec & Recording active sub-controllers */}
-                <div className="flex flex-col justify-between h-12 items-start shrink-0">
+                <div className="flex flex-col justify-between h-12 items-start shrink-0 @container" style={{ minWidth: 28 }}>
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
                     {isRecording ? (
-                    <span className="font-mono text-[#ef4444]">
-                      ⏺ {Math.floor(recordingElapsedMs/60000).toString().padStart(2,'0')}:{Math.floor((recordingElapsedMs%60000)/1000).toString().padStart(2,'0')}.{Math.floor((recordingElapsedMs%1000)/100)}
-                    </span>
-                  ) : 'Record'}
+                      <span className="font-mono text-[#ef4444]">
+                        ⏺ {Math.floor(recordingElapsedMs/60000).toString().padStart(2,'0')}:{Math.floor((recordingElapsedMs%60000)/1000).toString().padStart(2,'0')}.{Math.floor((recordingElapsedMs%1000)/100)}
+                      </span>
+                    ) : <span className="@[60px]:inline hidden">Record</span>}
                   </span>
                   {isRecording ? (
-                    <div className="h-[28px] flex items-center gap-2">
-                      {/* Pause/Resume Button */}
+                    <div className="h-[28px] flex items-center gap-1.5">
                       <button
                         onClick={isRecordingPaused ? handleResumeVideoRecording : handlePauseVideoRecording}
-                        className={`h-[28px] px-3 rounded-md text-[9.5px] font-sans uppercase font-bold tracking-wider flex items-center gap-1.5 cursor-pointer border transition-all ${
-                          isRecordingPaused 
-                            ? 'bg-[#0ACF83]/15 text-[#0ACF83] border-[#0ACF83]/20 hover:bg-[#0ACF83]/25' 
-                            : 'bg-rose-500/15 text-rose-550 border-rose-500/20 hover:bg-rose-500/25'
-                        }`}
-                        title={isRecordingPaused ? "Resume capture" : "Pause capture"}
+                        className={`h-[28px] px-2 rounded-md text-[9.5px] font-sans uppercase font-bold flex items-center gap-1.5 transition-all select-none cursor-pointer border ${isRecordingPaused ? 'bg-[#0ACF83]/15 text-[#0ACF83] border-[#0ACF83]/20' : 'bg-rose-500/15 text-rose-500 border-rose-500/20'}`}
+                        title={isRecordingPaused ? "Resume" : "Pause"}
                       >
-                        {isRecordingPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-                        <span>{isRecordingPaused ? 'Resume' : 'Pause'}</span>
+                        {isRecordingPaused ? <Play className="w-3 h-3 shrink-0" /> : <Pause className="w-3 h-3 shrink-0" />}
+                        <span className="@[90px]:inline hidden">{isRecordingPaused ? 'Resume' : 'Pause'}</span>
                       </button>
-                      {/* Stop Recording Button */}
-                      <button
-                        onClick={handleStopVideoRecordingEarly}
-                        className="h-[28px] px-3 rounded-md text-[9.5px] font-sans uppercase font-bold tracking-wider flex items-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700/60 cursor-pointer transition-all"
-                        title="Stop capture and compile now"
-                      >
-                        <Square className="w-3 h-3 text-neutral-450" />
-                        <span>Stop</span>
+                      <button onClick={handleStopVideoRecordingEarly}
+                        className="h-[28px] px-2 rounded-md text-[9.5px] font-sans uppercase font-bold flex items-center gap-1.5 select-none cursor-pointer bg-neutral-800/50 hover:bg-neutral-700/50 text-neutral-300 border border-neutral-700/50"
+                        title="Stop">
+                        <Square className="w-3 h-3 shrink-0 text-neutral-450" />
+                        <span className="@[90px]:inline hidden">Stop</span>
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={handleDirectExport}
-                      className={`h-[28px] px-3 rounded-md font-sans text-[9.5px] font-bold flex items-center justify-center gap-1.5 select-none transition-all cursor-pointer border ${
-                        isAreaSelectionMode
-                          ? 'bg-[#18A0FB]/15 border-[#18A0FB]/35 text-[#18A0FB] animate-pulse'
-                          : 'bg-[#0ACF83]/15 hover:bg-[#0ACF83]/25 text-[#0ACF83] border-[#0ACF83]/20 hover:border-[#0ACF83]/40'
-                      }`}
-                    >
+                    <button onClick={handleDirectExport}
+                      className={`h-[28px] px-2 rounded-md font-sans text-[9.5px] font-bold flex items-center justify-center gap-1.5 select-none transition-all cursor-pointer border ${isAreaSelectionMode ? 'bg-[#18A0FB]/15 border-[#18A0FB]/35 text-[#18A0FB] animate-pulse' : 'bg-[#0ACF83]/15 hover:bg-[#0ACF83]/25 text-[#0ACF83] border-[#0ACF83]/20'}`}
+                      title={isAreaSelectionMode ? 'Selecting' : 'Capture'}>
                       <span className="w-3 h-3 rounded-full border-2 border-current shrink-0 block" />
-                      <span>{isAreaSelectionMode ? 'Selecting' : 'Capture'}</span>
+                      <span className="@[60px]:inline hidden">{isAreaSelectionMode ? 'Selecting' : 'Capture'}</span>
                     </button>
                   )}
               </div>
             </div>
-
           {/* STEP 1: Area Selection Mode Panel */}
           {isAreaSelectionMode && recordingCountdown === null && !isRecording && (
             <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 z-[90]">
@@ -5036,21 +5050,41 @@ figma.ui.onmessage = (msg) => {
                   })()}
                 </div>
 
-                {/* SHOW / HIDE TOGGLES */}
-                <div className="space-y-2 pb-3 border-b border-[#333]">
-                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Show</span>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {([ ['configShowIcon','Icon'], ['configShowTitle','Title'], ['configShowSubtitle','Subtitle'], ['configShowDescription','Body'], ['configShowActions','Actions'] ] as const).map(([field, label]) => (
-                      <button key={field}
-                        onClick={() => updateActiveComponentField(field, !(activeComp as any)[field])}
-                        className={`py-1 px-2 text-[8.5px] font-bold rounded uppercase transition-all flex items-center gap-1 justify-center ${
-                          (activeComp as any)[field] ? 'bg-[#18A0FB]/15 text-[#18A0FB]' : 'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-300'
-                        }`}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* SHOW / HIDE TOGGLES — type-aware */}
+                {(() => {
+                  const t = activeComp.type;
+                  // Define which toggles each type supports
+                  const toggleMap: Record<string, [string,string][]> = {
+                    card:     [['configShowIcon','Icon'],['configShowTitle','Title'],['configShowSubtitle','Subtitle'],['configShowDescription','Body'],['configShowActions','Actions']],
+                    button:   [['configShowIcon','Icon']],
+                    chip:     [['configShowIcon','Icon']],
+                    dialog:   [['configShowIcon','Icon'],['configShowTitle','Title'],['configShowDescription','Body'],['configShowActions','Actions']],
+                    sheets:   [['configShowTitle','Title'],['configShowDescription','Body']],
+                    badge:    [],
+                    fab:      [],
+                    avatar:   [],
+                    progress: [],
+                    image:    [],
+                  };
+                  const toggles = toggleMap[t] || [];
+                  if (!toggles.length) return null;
+                  return (
+                    <div className="space-y-2 pb-3 border-b border-[#333]">
+                      <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Show</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {toggles.map(([field, label]) => (
+                          <button key={field}
+                            onClick={() => updateActiveComponentField(field as any, !(activeComp as any)[field])}
+                            className={`py-1 px-2 text-[8.5px] font-bold rounded uppercase transition-all flex items-center gap-1 justify-center ${
+                              (activeComp as any)[field] ? 'bg-[#18A0FB]/15 text-[#18A0FB]' : 'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-300'
+                            }`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* FAB LABEL */}
                 {activeComp.type === 'fab' && (
@@ -5066,7 +5100,7 @@ figma.ui.onmessage = (msg) => {
                 )}
 
                 {/* TEXT FIELDS */}
-                {activeComp.type !== 'fab' && (activeComp.configShowTitle || activeComp.configShowSubtitle || activeComp.configShowDescription) && (
+                {!['fab','image','progress','avatar'].includes(activeComp.type) && (activeComp.configShowTitle || activeComp.configShowSubtitle || activeComp.configShowDescription) && (
                   <div className="space-y-2 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Text</span>
                     {activeComp.configShowTitle && (
@@ -5098,7 +5132,7 @@ figma.ui.onmessage = (msg) => {
                 )}
 
                 {/* ICON PICKER */}
-                {(activeComp.configShowIcon || (activeComp.type === 'fab') || (activeComp.type === 'avatar' && (activeComp.variant === 'icon' || !activeComp.variant))) && (
+                {!['image','progress'].includes(activeComp.type) && (activeComp.configShowIcon || (activeComp.type === 'fab') || (activeComp.type === 'avatar' && (activeComp.variant === 'icon' || !activeComp.variant))) && (
                   <div className="space-y-1.5 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Icon</span>
                     <div className="space-y-1.5">
@@ -5262,14 +5296,25 @@ figma.ui.onmessage = (msg) => {
 
                 {/* ICON / AVATAR BG COLOR */}
                 {activeComp.type === 'avatar' && activeComp.variant !== 'image' && (
-                  <div className="flex items-center justify-between pb-3 border-b border-[#333]">
-                    <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">Avatar BG</span>
-                    <div className="flex items-center gap-1.5 bg-[#1E1E1E] px-2 py-1 rounded border border-neutral-800">
-                      <input type="color"
-                        value={activeComp.iconBgColor || '#6750A4'}
-                        onChange={(e) => updateActiveComponentField('iconBgColor', e.target.value)}
-                        className="w-4 h-4 border-none p-0 bg-transparent cursor-pointer rounded" />
-                      <span className="text-[8.5px] font-mono text-neutral-400">{activeComp.iconBgColor || '#6750A4'}</span>
+                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Avatar BG</span>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {['#6750A4','#0061A4','#006A60','#C00100','#386A20','#7D5260'].map(hex => (
+                        <button key={hex}
+                          onClick={() => updateActiveComponentField('iconBgColor', hex)}
+                          className={`w-5 h-5 rounded-full border cursor-pointer transition-transform ${(activeComp.iconBgColor || '#6750A4').toLowerCase() === hex.toLowerCase() ? 'border-[#18A0FB] scale-110 shadow shadow-[#18A0FB]/20' : 'border-neutral-700 hover:border-neutral-500 hover:scale-105'}`}
+                          style={{ backgroundColor: hex }}
+                          title={hex}>
+                          {(activeComp.iconBgColor || '#6750A4').toLowerCase() === hex.toLowerCase() && <span className="absolute inset-0 flex items-center justify-center text-[8px] text-white font-bold">✓</span>}
+                        </button>
+                      ))}
+                      <div className="relative w-5 h-5 rounded-full overflow-hidden border flex items-center justify-center cursor-pointer transition-all"
+                        style={{ backgroundImage: 'linear-gradient(135deg,#ff0055,#ffdd00,#00ffaa,#00a2ff,#bb00ff)', borderColor: !['#6750A4','#0061A4','#006A60','#C00100','#386A20','#7D5260'].includes(activeComp.iconBgColor || '') ? '#18A0FB' : '#404040' }}
+                        title="Custom color">
+                        <input type="color" value={activeComp.iconBgColor || '#6750A4'}
+                          onChange={(e) => updateActiveComponentField('iconBgColor', e.target.value)}
+                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                      </div>
                     </div>
                   </div>
                 )}
