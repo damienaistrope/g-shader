@@ -3513,6 +3513,7 @@ figma.ui.onmessage = function(msg) {
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
+          data-theme={canvasBgMode}
           style={isBackdropVisible && activeBackdrop === 'solid' ? { backgroundColor: backdropSolidColor } : undefined}
           onMouseDown={(e) => {
             window.focus();
@@ -3802,7 +3803,7 @@ figma.ui.onmessage = function(msg) {
                         borderRadius={comp.borderRadius}
                         baseColorHex={compBgColor}
                         midColorHex={compMidColor}
-                        endColorHex={specEndColor ?? compEndColor}
+                        endColorHex={compEndColor}
                         hoverActive={isHovered && isSelected}
                         renderMode={1}
                         intensity={intensity}
@@ -3872,7 +3873,7 @@ figma.ui.onmessage = function(msg) {
                             borderRadius={comp.borderRadius}
                             baseColorHex={compBgColor}
                             midColorHex={compMidColor}
-                            endColorHex={specEndColor ?? compEndColor}
+                            endColorHex={compEndColor}
                             hoverActive={isHovered && isSelected}
                             renderMode={0}
                             intensity={intensity}
@@ -3918,13 +3919,15 @@ figma.ui.onmessage = function(msg) {
                             icon={comp.configShowIcon ? <span className="material-symbols-outlined select-none" style={{ fontSize: 'inherit' }}>{localIcon}</span> : undefined}
                             className="pointer-events-auto w-full h-full justify-center items-center"
                             style={{ 
-                              color: compTextColor,
                               width: '100%',
                               height: '100%',
-                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
-                              border: compState !== 0 ? 'none' : compBorderColor !== 'transparent' ? `1px solid ${compBorderColor}` : undefined,
-                              boxShadow: compState !== 0 ? 'none' : compShadow,
-                              borderRadius: 'inherit'
+                              borderRadius: 'inherit',
+                              ...(compState !== 0 ? {
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                boxShadow: 'none',
+                                color: compTextColor,
+                              } : {})
                             }}
                           >
                             <span 
@@ -4129,8 +4132,8 @@ figma.ui.onmessage = function(msg) {
 
                                   {comp.configShowActions && (
                                     <div className="flex justify-start items-center gap-2 select-none w-full mt-1">
-                                      <M3Button variant="outlined" size="xs" style={{ color: libColors.primary.bg, borderColor: libColors.primary.bg }}>Secondary</M3Button>
-                                      <M3Button variant="filled" size="xs" style={{ backgroundColor: libColors.primary.bg, color: libColors.primary.text }}>Action</M3Button>
+                                      <M3Button variant="outlined" size="xs">Secondary</M3Button>
+                                      <M3Button variant="filled" size="xs">Action</M3Button>
                                     </div>
                                   )}
                                 </div>
@@ -4196,14 +4199,14 @@ figma.ui.onmessage = function(msg) {
                             style={{
                               width: '100%',
                               height: '100%',
-                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
-                              color: compTextColor,
-                              border: compState !== 0 ? 'none' : undefined,
-                              boxShadow: compState !== 0 ? 'none' : undefined,
                               borderRadius: 'inherit',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              ...(compState !== 0 ? {
+                                backgroundColor: 'transparent',
+                                boxShadow: 'none',
+                              } : {})
                             }}
                           />
                         </div>

@@ -506,8 +506,23 @@ export default function ShaderRenderer({
   const programRef = useRef<WebGLProgram | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const hoverValueRef = useRef<number>(0);
-  const timeRef = useRef<number>(Math.random() * 50); // randomized start to prevent lockstep timing
+  const timeRef = useRef<number>(Math.random() * 50);
   const lastTimeRef = useRef<number | null>(null);
+
+  // Uniform refs — updated every render cycle without restarting the loop
+  const stateRef = useRef(state);
+  const previousStateRef = useRef(previousState);
+  const transitionRef = useRef(transition);
+  const widthRef = useRef(width);
+  const heightRef = useRef(height);
+  const borderRadiusRef = useRef(borderRadius);
+  const baseColorRef = useRef(baseColorHex);
+  const midColorRef = useRef(midColorHex);
+  const endColorRef = useRef(endColorHex);
+  const hoverActiveRef = useRef(hoverActive);
+  const renderModeRef = useRef(renderMode);
+  const intensityRef = useRef(intensity);
+  const isActiveRef = useRef(isActive);
   const [internalError, setInternalError] = useState<string | null>(null);
 
   // Sync mouse state mapping to support uInteraction values
@@ -597,6 +612,23 @@ export default function ShaderRenderer({
       resizeObserver.disconnect();
     };
   }, []);
+
+  // Sync props → refs every render (no loop restart needed)
+  useEffect(() => {
+    stateRef.current = state;
+    previousStateRef.current = previousState;
+    transitionRef.current = transition;
+    widthRef.current = width;
+    heightRef.current = height;
+    borderRadiusRef.current = borderRadius;
+    baseColorRef.current = baseColorHex;
+    midColorRef.current = midColorHex;
+    endColorRef.current = endColorHex;
+    hoverActiveRef.current = hoverActive;
+    renderModeRef.current = renderMode;
+    intensityRef.current = intensity;
+    isActiveRef.current = isActive;
+  });
 
   // Compile Shaders
   useEffect(() => {
@@ -690,9 +722,9 @@ export default function ShaderRenderer({
       const dpr = window.devicePixelRatio || 1;
 
       // Draw Uniforms
-      gl.uniform1i(gl.getUniformLocation(program, 'uState'), state);
-      gl.uniform1i(gl.getUniformLocation(program, 'uPreviousState'), previousState);
-      gl.uniform1f(gl.getUniformLocation(program, 'uTransition'), transition);
+      gl.uniform1i(gl.getUniformLocation(program, 'uState'), stateRef.current);
+      gl.uniform1i(gl.getUniformLocation(program, 'uPreviousState'), previousStateRef.current);
+      gl.uniform1f(gl.getUniformLocation(program, 'uTransition'), transitionRef.current);
       gl.uniform2f(gl.getUniformLocation(program, 'uDimensions'), gl.canvas.width, gl.canvas.height);
       gl.uniform2f(gl.getUniformLocation(program, 'uShapeDimensions'), measuredWidthRef.current * dpr, measuredHeightRef.current * dpr);
       gl.uniform2f(gl.getUniformLocation(program, 'uDimensionsScale'), 0.0, 0.0);
@@ -705,19 +737,19 @@ export default function ShaderRenderer({
       const delta = (timestamp - lastTimeRef.current) / 1000.0;
       lastTimeRef.current = timestamp;
 
-      if (isActive) {
+      if (isActiveRef.current) {
         timeRef.current += delta;
       }
 
       gl.uniform1f(gl.getUniformLocation(program, 'uTime'), timeRef.current);
 
       // uBorderRadius: vec4 mapping
-      gl.uniform4f(gl.getUniformLocation(program, 'uBorderRadius'), borderRadius * dpr, borderRadius * dpr, borderRadius * dpr, borderRadius * dpr);
+      gl.uniform4f(gl.getUniformLocation(program, 'uBorderRadius'), borderRadiusRef.current * dpr, borderRadiusRef.current * dpr, borderRadiusRef.current * dpr, borderRadiusRef.current * dpr);
 
       // Normalize colors
-      const [br, bg, bb, ba] = hexToVec4(baseColorHex, 1.0);
-      const [mr, mg, mb, ma] = hexToVec4(midColorHex, 1.0);
-      const [er, eg, eb, ea] = hexToVec4(endColorHex, 1.0);
+      const [br, bg, bb, ba] = hexToVec4(baseColorRef.current, 1.0);
+      const [mr, mg, mb, ma] = hexToVec4(midColorRef.current, 1.0);
+      const [er, eg, eb, ea] = hexToVec4(endColorRef.current, 1.0);
       const [hr, hg, hb, ha] = hexToVec4('#ffffff', 0.12);
 
       gl.uniform4f(gl.getUniformLocation(program, 'uBaseColor'), br, bg, bb, ba);
@@ -726,12 +758,12 @@ export default function ShaderRenderer({
       gl.uniform4f(gl.getUniformLocation(program, 'uHoverColor'), hr, hg, hb, ha);
 
       // Animate uHover transitions smoothly
-      const targetHover = hoverActive ? 1.0 : 0.0;
+      const targetHover = hoverActiveRef.current ? 1.0 : 0.0;
       hoverValueRef.current += (targetHover - hoverValueRef.current) * 0.15;
       gl.uniform1f(gl.getUniformLocation(program, 'uHover'), hoverValueRef.current);
 
-      gl.uniform1i(gl.getUniformLocation(program, 'uRenderMode'), renderMode);
-      gl.uniform1f(gl.getUniformLocation(program, 'uIntensity'), intensity);
+      gl.uniform1i(gl.getUniformLocation(program, 'uRenderMode'), renderModeRef.current);
+      gl.uniform1f(gl.getUniformLocation(program, 'uIntensity'), intensityRef.current);
       gl.uniform1f(gl.getUniformLocation(program, 'uDynamicIntensity'), Math.sin(timeRef.current * 1.5) * 0.3 + 0.7);
 
       // Populate Interaction Array: [x, y, state, tBR, tPress, tRelease]
@@ -766,7 +798,7 @@ export default function ShaderRenderer({
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (positionBuffer) gl.deleteBuffer(positionBuffer);
     };
-  }, [state, previousState, transition, width, height, borderRadius, baseColorHex, midColorHex, endColorHex, hoverActive, renderMode, intensity, isActive]);
+  }, []); // render loop runs once — props flow through refs
 
   return (
     <div className="relative w-full h-full overflow-hidden select-none">
