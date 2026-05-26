@@ -9,6 +9,7 @@ interface CardProps {
   children: React.ReactNode;
   onClick?: () => void;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({ 
@@ -16,37 +17,34 @@ export const Card: React.FC<CardProps> = ({
   layout = 'vertical',
   children, 
   onClick,
-  className = ''
-}) => {
-  return (
-    <motion.div 
-      className={`md-card md-card--${variant} md-card--${layout} ${onClick ? 'md-card--interactive' : ''} ${className}`}
-      onClick={onClick}
-      whileHover={onClick ? { 
-        y: -4, 
-        boxShadow: variant === 'outlined' ? 'var(--md-sys-elevation-2)' : 'var(--md-sys-elevation-3)' 
-      } : {}}
-      whileTap={onClick ? { scale: 0.98 } : {}}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-    >
-      {onClick && <div className="md-card__state-layer" />}
-      {onClick && <Ripple />}
-      {children}
-    </motion.div>
-  );
-};
+  className = '',
+  style
+}) => (
+  <motion.div 
+    className={`md-card md-card--${variant} md-card--${layout} ${onClick ? 'md-card--interactive' : ''} ${className}`}
+    onClick={onClick}
+    style={style}
+    whileHover={onClick ? { y: -2, boxShadow: 'var(--md-sys-elevation-2)' } : {}}
+    whileTap={onClick ? { scale: 0.99 } : {}}
+    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+  >
+    {onClick && <div className="md-card__state-layer" />}
+    {onClick && <Ripple />}
+    {children}
+  </motion.div>
+);
 
 export const CardHeader: React.FC<{ 
-  header?: string; 
-  subhead?: string; 
+  header?: React.ReactNode; 
+  subhead?: React.ReactNode; 
   avatar?: React.ReactNode; 
   action?: React.ReactNode;
 }> = ({ header, subhead, avatar, action }) => (
   <div className="md-card__header">
     {avatar && <div className="md-card__avatar">{avatar}</div>}
     <div className="md-card__header-text">
-       <div className="md-card__header-title">{header}</div>
-       {subhead && <div className="md-card__header-subhead">{subhead}</div>}
+      {header && <div className="md-card__header-title">{header}</div>}
+      {subhead && <div className="md-card__header-subhead">{subhead}</div>}
     </div>
     {action && <div className="md-card__header-action">{action}</div>}
   </div>
@@ -57,10 +55,14 @@ export const CardMedia: React.FC<{
   src?: string; 
   className?: string;
   aspectRatio?: '16/9' | '4/3' | '1/1' | 'custom';
-}> = ({ children, src, className = '', aspectRatio = '16/9' }) => (
+  style?: React.CSSProperties;
+}> = ({ children, src, className = '', aspectRatio = '16/9', style }) => (
   <div 
-    className={`md-card__media md-card__media--${aspectRatio.replace('/', '-')} ${className}`} 
-    style={src ? { backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+    className={`md-card__media ${aspectRatio !== 'custom' ? `md-card__media--${aspectRatio.replace('/', '-')}` : ''} ${className}`}
+    style={{ 
+      ...(src ? { backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
+      ...style
+    }}
   >
     {children}
   </div>
@@ -68,12 +70,13 @@ export const CardMedia: React.FC<{
 
 export const CardContent: React.FC<{ 
   children?: React.ReactNode;
-  title?: string;
-  subtitle?: string;
-  headline?: string;
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  headline?: React.ReactNode;
   className?: string;
-}> = ({ children, title, subtitle, headline, className = '' }) => (
-  <div className={`md-card__content ${className}`}>
+  style?: React.CSSProperties;
+}> = ({ children, title, subtitle, headline, className = '', style }) => (
+  <div className={`md-card__content ${className}`} style={style}>
     {(title || subtitle || headline) && (
       <div className="md-card__content-header">
         {headline && <div className="md-card__content-headline">{headline}</div>}
@@ -85,6 +88,11 @@ export const CardContent: React.FC<{
   </div>
 );
 
-export const CardActions: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="md-card__actions">{children}</div>
+export const CardActions: React.FC<{ 
+  children: React.ReactNode;
+  align?: 'start' | 'end';
+}> = ({ children, align = 'end' }) => (
+  <div className="md-card__actions" style={{ justifyContent: align === 'start' ? 'flex-start' : 'flex-end' }}>
+    {children}
+  </div>
 );

@@ -3761,7 +3761,7 @@ figma.ui.onmessage = function(msg) {
                     <div 
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
-                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 overflow-hidden ${
+                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
                         (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
@@ -3769,7 +3769,7 @@ figma.ui.onmessage = function(msg) {
                         top: `calc(50% + ${comp.y}px)`,
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
-                        height: comp.heightMode === 'auto' ? 'auto' : `${comp.height}px`,
+                        height: (comp.heightMode === 'auto' || (comp.heightMode === undefined && ['card','dialog','sheets'].includes(comp.type))) ? 'auto' : `${comp.height}px`,
                         minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
                         minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
@@ -3979,7 +3979,7 @@ figma.ui.onmessage = function(msg) {
                         <M3Card 
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
-                          className="w-full h-full bg-transparent! shadow-none! border-none! flex"
+                          className="w-full bg-transparent! shadow-none! border-none! flex"
                           style={{
                             flexDirection: (comp.layout || 'vertical') === 'horizontal' ? 'row' : 'column',
                             justifyContent: 'space-between'
