@@ -74,6 +74,7 @@ export default function Canvas({
   onCropMouseDown, onConfirmCrop, onCancelCrop,
 }: CanvasProps) {
   return (
+    <>
          {/* CENTER CAMERA VIEWPORT: FIGMA EDITOR CANVAS */}
         <main 
           className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 overflow-hidden ${
@@ -1480,7 +1481,6 @@ export default function Canvas({
 
         </main>
 
-        {/* RIGHT PANEL: FIGMA UNIFIED PROPERTY INSPECTOR (Pure Figma Properties & Plugin controls) */}
-
+    </>
   );
 }
