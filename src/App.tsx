@@ -1486,16 +1486,18 @@ figma.ui.onmessage = (msg) => {
         return c;
       }));
     } else {
-      if (stateId === activeState) {
-        setPreviousState(activeState);
-        setActiveState(0);
-        setTransitionVal(0.0);
-        showToast("Returned components to state: Neutral Default");
-        return;
-      }
+      // No component selected — apply to ALL canvas components
+      const newState = stateId === activeState ? 0 : stateId;
       setPreviousState(activeState);
-      setActiveState(stateId);
+      setActiveState(newState);
       setTransitionVal(0.0);
+      setCanvasComponents(prev => prev.map(c => ({
+        ...c,
+        previousState: c.activeState ?? 0,
+        activeState: newState,
+        transitionVal: 0.0,
+      })));
+      showToast(newState === 0 ? "Reset all to Neutral" : `Energy: ${OFFICIAL_STATES.find(s => s.id === newState)?.label || newState}`);
     }
   };
 
@@ -3263,11 +3265,12 @@ figma.ui.onmessage = (msg) => {
               </div>
 
               {/* Backdrop type selectors with h-8 height matching the format ones */}
-              <div className="h-8 grid grid-cols-3 gap-0.5 bg-[#1E1E1E] p-0.5 rounded-md border border-neutral-800 text-center items-center">
+              <div className="h-8 grid grid-cols-4 gap-0.5 bg-[#1E1E1E] p-0.5 rounded-md border border-neutral-800 text-center items-center">
                 {[
                   { mode: 'solid', label: 'Solid' },
                   { mode: 'uploaded', label: 'PNG' },
-                  { mode: 'live', label: 'Live' }
+                  { mode: 'live', label: 'Live' },
+                  { mode: 'figma', label: 'Figma' }
                 ].map((btn) => {
                   const isSelected = activeBackdrop === btn.mode;
                   return (
@@ -3332,7 +3335,6 @@ figma.ui.onmessage = (msg) => {
                               )}
                             </button>
                           ));
-                          ;
                         })()}
                           {/* Custom color — inline with theme swatches */}
                           {(() => {
@@ -3409,23 +3411,6 @@ figma.ui.onmessage = (msg) => {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
-                      <span>Scale</span>
-                      <span className="font-mono text-[10px] font-bold text-[#18A0FB] leading-none">{backdropScale}%</span>
-                    </div>
-                    <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
-                      <input 
-                        type="range"
-                        min="35"
-                        max="180"
-                        step="5"
-                        value={backdropScale}
-                        onChange={(e) => setBackdropScale(Number(e.target.value))}
-                        className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
-                      />
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -3434,7 +3419,7 @@ figma.ui.onmessage = (msg) => {
           {/* Section 4: Aurora API Reference & Sizing Specs */}
           <div className="p-4 border-t border-[#1C1C1C] flex flex-col gap-2.5 shrink-0 bg-[#242424]/40 text-[#E6E6E6]" id="m3-api-link-module">
             <div className="flex items-center justify-between text-[10px] font-sans uppercase text-neutral-450 font-bold tracking-wider">
-              <span>Aurora API</span>
+              <span>Figma API Link</span>
             </div>
 
             <div className="bg-[#1E1E1E] p-2.5 rounded-lg border border-neutral-800 space-y-2.5">
@@ -4060,6 +4045,7 @@ figma.ui.onmessage = (msg) => {
                               </M3CardMedia>
                             </>
                           )}
+                        </M3Card>
                       )}
 
                       {/* SPECIMEN: CHIP */}
@@ -4509,7 +4495,7 @@ figma.ui.onmessage = (msg) => {
 
             {/* =========================================================================================
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
-                ========================================================================================= */}
+                ==========================================================================*/}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
               <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-2 overflow-x-auto">
 
@@ -4923,8 +4909,17 @@ figma.ui.onmessage = (msg) => {
                   {/* Avatar type-specific fields */}
                   {activeComp.type === 'avatar' && (
                     <div className="space-y-2 mt-2">
+                      <div className="grid grid-cols-3 gap-1 bg-[#1A1A1A] p-0.5 rounded border border-neutral-800/40">
+                        {(['icon','initials','image'] as const).map(t => (
+                          <button key={t}
+                            onClick={() => { updateActiveComponentField('variant', t); updateActiveComponentField('avatarType', t); }}
+                            className={`py-1 text-[8px] font-bold rounded cursor-pointer uppercase transition-all ${(activeComp.variant || 'icon') === t ? 'bg-[#18A0FB]/15 text-[#18A0FB]' : 'text-neutral-400 hover:text-neutral-200 bg-transparent'}`}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
                       {(activeComp.variant === 'icon' || !activeComp.variant) && (
-                        <div className="text-[9px] text-neutral-500 font-sans">Icon controlled via the icon picker above</div>
+                        <div className="text-[9px] text-neutral-500 font-sans">Pick icon below ↓</div>
                       )}
                       {activeComp.variant === 'initials' && (
                         <div className="space-y-1">
@@ -5066,8 +5061,21 @@ figma.ui.onmessage = (msg) => {
                   </div>
                 </div>
 
+                {/* FAB LABEL */}
+                {activeComp.type === 'fab' && (
+                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">FAB Label</span>
+                    <input type="text"
+                      value={activeComp.text || ''}
+                      onChange={(e) => updateActiveComponentField('text', e.target.value)}
+                      placeholder="Action"
+                      className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-100 focus:border-[#18A0FB] outline-none font-sans" />
+                    <span className="text-[8px] text-neutral-600">Shown when variant is Extended</span>
+                  </div>
+                )}
+
                 {/* TEXT FIELDS */}
-                {(activeComp.configShowTitle || activeComp.configShowSubtitle || activeComp.configShowDescription) && (
+                {activeComp.type !== 'fab' && (activeComp.configShowTitle || activeComp.configShowSubtitle || activeComp.configShowDescription) && (
                   <div className="space-y-2 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Text</span>
                     {activeComp.configShowTitle && (
@@ -5099,7 +5107,7 @@ figma.ui.onmessage = (msg) => {
                 )}
 
                 {/* ICON PICKER */}
-                {activeComp.configShowIcon && activeComp.type !== 'avatar' && (
+                {(activeComp.configShowIcon || ['fab','avatar'].includes(activeComp.type)) && (
                   <div className="space-y-1.5 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Icon</span>
                     <div className="grid grid-cols-5 gap-1">
@@ -5152,7 +5160,13 @@ figma.ui.onmessage = (msg) => {
                     <div className="flex gap-1 mt-1">
                       {(['vertical','horizontal'] as const).map(layout => (
                         <button key={layout}
-                          onClick={() => updateActiveComponentField('layout' as any, layout)}
+                          onClick={() => {
+                          updateActiveComponentField('layout' as any, layout);
+                          if (layout === 'horizontal') {
+                            updateActiveComponentField('configShowDescription', false);
+                            updateActiveComponentField('configShowActions', false);
+                          }
+                        }}
                           className={`flex-1 py-1 text-[8.5px] font-bold uppercase rounded cursor-pointer transition-all ${(activeComp.layout||'vertical')===layout?'bg-[#18A0FB]/15 text-[#18A0FB]':'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-300'}`}>
                           {layout}
                         </button>
@@ -5319,10 +5333,7 @@ figma.ui.onmessage = (msg) => {
           <div className="bg-[#2C2C2C] border border-neutral-700/60 rounded-xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden text-[#E6E6E6]">
             
             <div className="p-4 bg-[#222222] border-b border-[#1A1A1A] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FolderHeart className="w-4 h-4 text-[#18A0FB]" />
-                <span className="font-bold text-xs uppercase tracking-wider text-neutral-200">Save Combination Spec</span>
-              </div>
+              <span className="font-bold text-xs uppercase tracking-wider text-neutral-200">Save Combination Spec</span>
               <button 
                 onClick={() => setIsSaveComboModalOpen(false)}
                 className="text-neutral-500 hover:text-white transition-colors cursor-pointer border-none bg-transparent"
@@ -5344,19 +5355,39 @@ figma.ui.onmessage = (msg) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-mono tracking-wider font-bold text-neutral-450 block">Link to Figma File Context</label>
-                <select
-                  value={newComboFileId}
-                  onChange={(e) => setNewComboFileId(e.target.value)}
-                  className="w-full bg-[#1A1A1A] text-white border border-neutral-700 rounded-md p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#18A0FB] cursor-pointer"
-                >
-                  {linkedFigmaFiles.map(file => (
-                    <option key={file.id} value={file.id}>{file.name}</option>
-                  ))}
-                </select>
-                <span className="text-[9.5px] text-neutral-500 block leading-normal pt-1">
-                  Saving a combination captures: Active components, WebGL wave statuses, color libraries, and active backdrops in relation to the linked file.
-                </span>
+                <label className="text-[10px] uppercase font-mono tracking-wider font-bold text-neutral-450 block">Link to Figma File</label>
+                <div className="relative">
+                  <select
+                    value={newComboFileId}
+                    onChange={(e) => setNewComboFileId(e.target.value)}
+                    className="w-full bg-[#1A1A1A] text-white border border-neutral-700 rounded px-3 pr-8 py-2 text-[10px] font-sans focus:border-[#18A0FB] focus:outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="">— None —</option>
+                    {linkedFigmaFiles.map(file => (
+                      <option key={file.id} value={file.id}>{file.name}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />
+                  </div>
+                </div>
+                <input type="text" placeholder="Or paste a new Figma file URL and press ↵"
+                  className="w-full bg-[#1A1A1A] text-white border border-neutral-700 rounded px-2.5 py-1.5 text-[10px] font-sans focus:border-[#18A0FB] focus:outline-none placeholder-neutral-600 mt-1.5"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const url = (e.target as HTMLInputElement).value.trim();
+                      if (url) {
+                        const id = `fig-${Date.now()}`;
+                        const name = url.includes('figma.com') ? url.split('/').filter(Boolean).pop()?.split('?')[0] || 'Figma File' : url;
+                        setLinkedFigmaFiles((prev: any[]) => [...prev, { id, name, url }]);
+                        setNewComboFileId(id);
+                        (e.target as HTMLInputElement).value = '';
+                        showToast(`Linked: ${name}`);
+                      }
+                    }
+                  }}
+                />
+                <span className="text-[9px] text-neutral-600 block pt-1">Captures: components, energy states, colors, and backdrops.</span>
               </div>
             </div>
 
