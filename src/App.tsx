@@ -3769,7 +3769,7 @@ figma.ui.onmessage = function(msg) {
                         top: `calc(50% + ${comp.y}px)`,
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
-                        height: (comp.heightMode === 'auto' || (comp.heightMode === undefined && ['card','dialog','sheets'].includes(comp.type))) ? 'auto' : `${comp.height}px`,
+                        height: ['card','dialog','sheets'].includes(comp.type) ? 'auto' : `${comp.height}px`,
                         minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
                         minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
@@ -3936,7 +3936,9 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className="relative w-full h-full z-10 flex flex-col pointer-events-auto shrink-0 grow justify-center"
+                      className={`relative w-full z-10 flex flex-col pointer-events-auto ${
+                        ['card','dialog','sheets'].includes(comp.type) ? 'items-stretch' : 'h-full items-center justify-center'
+                      }`}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
@@ -3948,17 +3950,7 @@ figma.ui.onmessage = function(msg) {
                             onClick={handleButtonClick}
                             icon={comp.configShowIcon ? <span className="material-symbols-outlined select-none" style={{ fontSize: 'inherit' }}>{localIcon}</span> : undefined}
                             className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{ 
-                              width: '100%',
-                              height: '100%',
-                              borderRadius: 'inherit',
-                              ...(compState !== 0 ? {
-                                backgroundColor: 'transparent',
-                                border: 'none',
-                                boxShadow: 'none',
-                                color: compTextColor,
-                              } : {})
-                            }}
+                            style={{}}
                           >
                             <span 
                               contentEditable
@@ -4089,41 +4081,18 @@ figma.ui.onmessage = function(msg) {
 
                       {/* SPECIMEN: CHIP */}
                       {comp.type === 'chip' && (
-                        <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
-                          <M3Chip 
-                            label=""
+                        <div className="flex items-center justify-center p-3">
+                          <M3Chip
+                            label={comp.text || 'Interactive'}
                             variant={(comp.variant as any) || 'assist'}
                             icon={comp.configShowIcon ? localIcon : undefined}
                             selected={comp.selectedState || compState === 2}
                             onRemove={comp.variant === 'input' ? (() => {}) : undefined}
-                            className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: compState !== 0 ? 'transparent' : compBgColor,
-                              border: compState !== 0 ? 'none' : compBorderColor !== 'transparent' ? `1px solid ${compBorderColor}` : undefined,
-                              boxShadow: compState !== 0 ? 'none' : undefined,
-                              borderRadius: 'inherit',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: compTextColor
-                            }}
-                          >
-                            <span 
-                              contentEditable
-                              suppressContentEditableWarning
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                              className="text-[12px] font-sans font-medium tracking-[0.0125em] hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors flex items-center justify-center text-center select-text leading-none"
-                              style={{ color: compTextColor }}
-                            >
-                              {comp.text}
-                            </span>
-                          </M3Chip>
+                            onClick={handleButtonClick}
+                          />
                         </div>
                       )}
+
 
                       {/* SPECIMEN: FAB  */}
                       {comp.type === 'fab' && (
@@ -4134,15 +4103,7 @@ figma.ui.onmessage = function(msg) {
                             variant={(comp.variant as any) || 'primary'}
                             size={comp.sizePreset === 'xlarge' ? 'extended' : comp.sizePreset === 'small' || comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'large' ? 'large' : 'medium'}
                             onClick={handleButtonClick}
-                            className="pointer-events-auto w-full h-full justify-center items-center"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              borderRadius: 'inherit',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
+                            style={{}}
                           />
                         </div>
                       )}
@@ -4534,7 +4495,7 @@ figma.ui.onmessage = function(msg) {
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
                 ========================================================================================= */}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
-              <div className="flex items-center justify-between w-full max-w-[1400px] mx-auto gap-3 flex-wrap">
+              <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-3">
                 
                 {/* 1. Motion */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-fit">
