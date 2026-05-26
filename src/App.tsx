@@ -870,14 +870,21 @@ figma.ui.onmessage = (msg) => {
       icon = 'person';
     } else if (type === 'progress') {
       name = `⏳ Progress ${Math.floor(Math.random() * 90) + 10}`;
-      width = 240;
+      width = 160;
       height = 48;
       borderRadius = 4;
       text = "";
       containerType = 'primary';
       icon = 'bolt';
-    }
+    } else if (type === 'image') {
+      name = `🖼 Image ${Math.floor(Math.random() * 90) + 10}`;
+      width = 180;
+      height = 180;
+      borderRadius = 12;
+      containerType = 'surface';
+      icon = 'image';
 
+    }
     const newComp: ComponentInstance = {
       id,
       name,
@@ -909,7 +916,7 @@ figma.ui.onmessage = (msg) => {
       activeState: 0,
       previousState: 0,
       transitionVal: 1.0,
-      compIntensity: ['card','dialog','sheets'].includes(type) ? 0.75 : 0.5,
+      compIntensity: ['card','dialog','sheets','image'].includes(type) ? 0.75 : 0.5,
     };
 
     setCanvasComponents(prev => [...prev, newComp]);
@@ -2304,12 +2311,11 @@ figma.ui.onmessage = (msg) => {
       hasBaseShaderBg = true;
     }
     else if (comp.type === 'progress') {
-      hasBaseShaderBg = false;
+      hasBaseShaderBg = false;  // No energy shader on container
       bg = 'transparent';
       text = libColors.primary.bg;
       borderColor = 'transparent';
       shadow = 'none';
-      hasBaseShaderBg = true;
     }
 
     return { bg, text, subtext, borderColor, shadow, hasBaseShaderBg };
@@ -3123,19 +3129,19 @@ figma.ui.onmessage = (msg) => {
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Avatar</span>
               </button>
+              <button
+                onClick={() => handleAddNewComponent('image')}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
+              >
+                <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
+                <span>Image</span>
+              </button>
               <button 
                 onClick={() => handleAddNewComponent('progress')}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white text-[11px] font-semibold tracking-wide text-neutral-300 transition-colors shadow-sm outline-none border-none cursor-pointer"
               >
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Progress</span>
-              </button>
-              <button
-                onClick={() => handleAddNewComponent('image')}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white transition-colors text-[10px] font-sans font-medium text-neutral-300 select-none cursor-pointer border-none group"
-              >
-                <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
-                <span>Image</span>
               </button>
             </div>
           </div>
@@ -3618,14 +3624,9 @@ figma.ui.onmessage = (msg) => {
               <div 
                 className="pointer-events-auto text-center font-sans max-w-xs p-8 rounded-2xl flex flex-col items-center gap-2 transition-all duration-300"
                 style={{
-                  background: canvasBgMode === 'light'
-                    ? 'rgba(255,255,255,0.55)'
-                    : 'rgba(18,18,20,0.45)',
+                  background: 'rgba(255,255,255,0.80)',
                   backdropFilter: 'blur(20px) saturate(1.4)',
                   WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-                  boxShadow: canvasBgMode === 'light'
-                    ? '0 4px 32px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.8)'
-                    : '0 4px 32px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.06)',
                 }}
               >
                 <div 
@@ -4353,14 +4354,15 @@ figma.ui.onmessage = (msg) => {
                               <span className="material-symbols-outlined" style={{ fontSize: 32, color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
                             </div>
                           )}
-                          {/* Energy overlay — sits on top of the image with screen blend */}
-                          {compState !== 0 && isAnimationActive && (
+                          {/* Energy overlay — container-scale blend on top of image, constant opacity */}
+                          {compState !== 0 && (
                             <div style={{
                               position: 'absolute', inset: 0,
                               mixBlendMode: 'screen',
-                              opacity: effectiveIntensity * 0.7,
+                              opacity: 0.85,
                               pointerEvents: 'none',
                               zIndex: 2,
+                              filter: `blur(${compIntensity * 2}px) saturate(1.2)`,
                             }}>
                               <ShaderRenderer
                                 canvasId={`canvas-for-energy-${comp.id}`}
@@ -4373,9 +4375,9 @@ figma.ui.onmessage = (msg) => {
                                 baseColorHex={compBgColor}
                                 midColorHex={compMidColor}
                                 endColorHex={compEndColor}
-                                hoverActive={false}
+                                hoverActive={isHovered && isSelected}
                                 renderMode={0}
-                                intensity={effectiveIntensity}
+                                intensity={compIntensity}
                                 isActive={isAnimationActive}
                               />
                             </div>
@@ -4383,13 +4385,15 @@ figma.ui.onmessage = (msg) => {
                         </div>
                       )}
 
-                      {/* SPECIMEN: PROGRESS */}
+                      {/* SPECIMEN: PROGRESS — transparent container, grey track, energy only on bar primary color */}
                       {comp.type === 'progress' && (
-                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px',
+                        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', backgroundColor: 'transparent',
                           ...(compState !== 0 ? {
                             '--md-sys-color-primary': compMidColor,
-                            // Track stays neutral — only the indicator gets energy color
-                          } as React.CSSProperties : {})
+                            '--md-sys-color-secondary-container': 'transparent',
+                          } as React.CSSProperties : {
+                            '--md-sys-color-primary': libColors.primary.bg,
+                          })
                         }}>
                           {comp.variant === 'circular' ? (
                             <M3CircularProgress
@@ -4599,13 +4603,13 @@ figma.ui.onmessage = (msg) => {
                 </div>
 
                 {/* 7. Action bundle: Capture Spec & Recording active sub-controllers */}
-                <div className="flex flex-col justify-between h-12 items-start shrink-0 @container" style={{ minWidth: 28 }}>
+                <div className="flex flex-col justify-between h-12 items-start shrink-0" style={{ minWidth: 28 }}>
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
                     {isRecording ? (
                       <span className="font-mono text-[#ef4444]">
                         ⏺ {Math.floor(recordingElapsedMs/60000).toString().padStart(2,'0')}:{Math.floor((recordingElapsedMs%60000)/1000).toString().padStart(2,'0')}.{Math.floor((recordingElapsedMs%1000)/100)}
                       </span>
-                    ) : <span className="@[60px]:inline hidden">Record</span>}
+                    ) : <span className="hidden sm:inline">Record</span>}
                   </span>
                   {isRecording ? (
                     <div className="h-[28px] flex items-center gap-1.5">
@@ -4615,13 +4619,13 @@ figma.ui.onmessage = (msg) => {
                         title={isRecordingPaused ? "Resume" : "Pause"}
                       >
                         {isRecordingPaused ? <Play className="w-3 h-3 shrink-0" /> : <Pause className="w-3 h-3 shrink-0" />}
-                        <span className="@[90px]:inline hidden">{isRecordingPaused ? 'Resume' : 'Pause'}</span>
+                        <span className="hidden sm:inline">{isRecordingPaused ? 'Resume' : 'Pause'}</span>
                       </button>
                       <button onClick={handleStopVideoRecordingEarly}
                         className="h-[28px] px-2 rounded-md text-[9.5px] font-sans uppercase font-bold flex items-center gap-1.5 select-none cursor-pointer bg-neutral-800/50 hover:bg-neutral-700/50 text-neutral-300 border border-neutral-700/50"
                         title="Stop">
                         <Square className="w-3 h-3 shrink-0 text-neutral-450" />
-                        <span className="@[90px]:inline hidden">Stop</span>
+                        <span className="hidden sm:inline">Stop</span>
                       </button>
                     </div>
                   ) : (
@@ -4629,10 +4633,11 @@ figma.ui.onmessage = (msg) => {
                       className={`h-[28px] px-2 rounded-md font-sans text-[9.5px] font-bold flex items-center justify-center gap-1.5 select-none transition-all cursor-pointer border ${isAreaSelectionMode ? 'bg-[#18A0FB]/15 border-[#18A0FB]/35 text-[#18A0FB] animate-pulse' : 'bg-[#0ACF83]/15 hover:bg-[#0ACF83]/25 text-[#0ACF83] border-[#0ACF83]/20'}`}
                       title={isAreaSelectionMode ? 'Selecting' : 'Capture'}>
                       <span className="w-3 h-3 rounded-full border-2 border-current shrink-0 block" />
-                      <span className="@[60px]:inline hidden">{isAreaSelectionMode ? 'Selecting' : 'Capture'}</span>
+                      <span className="hidden sm:inline">{isAreaSelectionMode ? 'Selecting' : 'Capture'}</span>
                     </button>
                   )}
               </div>
+            </div>
             </div>
           {/* STEP 1: Area Selection Mode Panel */}
           {isAreaSelectionMode && recordingCountdown === null && !isRecording && (
@@ -4741,7 +4746,6 @@ figma.ui.onmessage = (msg) => {
               </div>
             </div>
           )}
-          </div>
 
           {/* Global Interaction Clicks Layer */}
           {recordShowClicks && (
@@ -5166,33 +5170,44 @@ figma.ui.onmessage = (msg) => {
 
                 {/* IMAGE UPLOAD (for image type) */}
                 {activeComp.type === 'image' && (
-                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Image Source</span>
-                    <div className="flex gap-1.5">
-                      <label htmlFor="image-comp-upload" className="flex-1 py-1.5 px-2 bg-[#2C2C2C] hover:bg-[#333] text-neutral-300 rounded text-[9px] font-bold uppercase cursor-pointer text-center border border-neutral-700/50 transition-colors">
-                        {activeComp.iconImage ? 'Replace' : 'Upload Image'}
-                      </label>
-                      <input type="file" accept="image/*" id="image-comp-upload" className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => updateActiveComponentField('iconImage', ev.target?.result as string);
-                            reader.readAsDataURL(file);
-                          }
-                        }} />
-                      {activeComp.iconImage && (
-                        <button onClick={() => updateActiveComponentField('iconImage', undefined)}
-                          className="py-1.5 px-2 bg-red-950/25 hover:bg-red-900/30 text-red-400 rounded text-[9px] font-bold uppercase cursor-pointer border-none">
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    {activeComp.iconImage && (
-                      <div className="rounded overflow-hidden h-20 bg-[#1E1E1E]">
-                        <img src={activeComp.iconImage} className="w-full h-full object-cover" alt="preview" />
+                  <div className="space-y-2 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Image</span>
+                    {activeComp.iconImage ? (
+                      <div className="space-y-1.5">
+                        {/* Preview at natural ratio, 80px tall */}
+                        <div className="flex justify-center bg-[#1A1A1A] rounded-lg overflow-hidden" style={{ height: 80 }}>
+                          <img src={activeComp.iconImage} alt="preview"
+                            style={{ height: '100%', width: 'auto', objectFit: 'contain', display: 'block' }} />
+                        </div>
+                        <div className="flex gap-1.5">
+                          <label htmlFor="image-comp-upload"
+                            className="flex-1 h-7 flex items-center justify-center gap-1 bg-[#2C2C2C] hover:bg-[#383838] text-neutral-300 hover:text-white rounded text-[9.5px] font-semibold cursor-pointer border border-neutral-700/40 transition-all">
+                            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>upload</span>
+                            Replace
+                          </label>
+                          <button onClick={() => updateActiveComponentField('iconImage', undefined)}
+                            className="flex-1 h-7 flex items-center justify-center gap-1 bg-red-950/20 hover:bg-red-900/35 text-red-400 hover:text-red-300 rounded text-[9.5px] font-semibold cursor-pointer border border-red-900/30 transition-all">
+                            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>delete</span>
+                            Remove
+                          </button>
+                        </div>
                       </div>
+                    ) : (
+                      <label htmlFor="image-comp-upload"
+                        className="flex flex-col items-center justify-center gap-2 h-20 bg-[#1A1A1A] hover:bg-[#222] border border-dashed border-neutral-700 hover:border-[#18A0FB]/50 rounded-lg cursor-pointer transition-all">
+                        <span className="material-symbols-outlined text-neutral-600" style={{ fontSize: 24 }}>add_photo_alternate</span>
+                        <span className="text-[9px] text-neutral-500 font-semibold uppercase">Upload Image</span>
+                      </label>
                     )}
+                    <input type="file" accept="image/*" id="image-comp-upload" className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => updateActiveComponentField('iconImage', ev.target?.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }} />
                   </div>
                 )}
 
