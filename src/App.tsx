@@ -3769,7 +3769,7 @@ figma.ui.onmessage = function(msg) {
                         top: `calc(50% + ${comp.y}px)`,
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
-                        height: ['card','dialog','sheets'].includes(comp.type) ? 'auto' : `${comp.height}px`,
+                        height: `${comp.height}px`,
                         minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
                         minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
@@ -3936,7 +3936,8 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className="relative w-full h-full z-10 flex flex-col pointer-events-auto items-center justify-center" style={{ isolation: "isolate", filter: "none" }}
+                      className={`relative w-full h-full z-10 flex flex-col pointer-events-auto ${['card','dialog','sheets'].includes(comp.type) ? '' : 'items-center justify-center'}`}
+                      style={{ isolation: 'isolate', filter: 'none' }}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
