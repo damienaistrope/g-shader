@@ -380,9 +380,9 @@ const M3_SIZE_PRESETS = {
   progress: {
     xsmall: { width: 160, height: 40, borderRadius: 4 },
     small:  { width: 220, height: 40, borderRadius: 4 },
-    medium: { width: 280, height: 48, borderRadius: 4 },
-    large:  { width: 340, height: 48, borderRadius: 4 },
-    xlarge: { width: 400, height: 56, borderRadius: 4 }
+    medium: { width: 240, height: 48, borderRadius: 4 },
+    large:  { width: 300, height: 48, borderRadius: 4 },
+    xlarge: { width: 360, height: 56, borderRadius: 4 }
   },
   image: {
     xsmall: { width: 120, height: 80, borderRadius: 8 },
@@ -870,8 +870,8 @@ figma.ui.onmessage = (msg) => {
       icon = 'person';
     } else if (type === 'progress') {
       name = `⏳ Progress ${Math.floor(Math.random() * 90) + 10}`;
-      width = 200;
-      height = 8;
+      width = 240;
+      height = 48;
       borderRadius = 4;
       text = "";
       containerType = 'primary';
@@ -3562,7 +3562,7 @@ figma.ui.onmessage = (msg) => {
 
           {/* =========================================================================================
               DESIGN CONTEXT BACKDROP SYSTEM
-              ========================================================================================= */}
+              ============================================================================*/}
           {isBackdropVisible && (
             <div className="absolute inset-0 z-1 pointer-events-none flex items-center justify-center overflow-hidden animate-fade-in">
               {/* PNG Uploaded Frame Backdrop */}
@@ -3622,11 +3622,11 @@ figma.ui.onmessage = (msg) => {
                 }}
               >
                 <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center mb-1"
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-1" style={{ backgroundColor: canvasBgMode === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.12)' }}
                 >
                   <span 
                     className={`material-symbols-outlined text-[20px] select-none ${
-                      canvasBgMode === 'light' ? 'text-neutral-700' : 'text-neutral-800'
+                      'text-neutral-900'
                     }`}
                   >
                     space_dashboard
@@ -3634,14 +3634,14 @@ figma.ui.onmessage = (msg) => {
                 </div>
                 <span 
                   className={`text-[11.5px] select-none block font-bold uppercase tracking-wider ${
-                    'text-neutral-800'
+                    'text-neutral-900'
                   }`}
                 >
                   Canvas is empty
                 </span>
                 <span 
                   className={`text-[9.5px] select-none leading-relaxed mt-0.5 ${
-                    'text-neutral-600'
+                    'text-neutral-700'
                   }`}
                 >
                   Click on any specimen from the specimen kit sidebar to add it.
@@ -3920,9 +3920,8 @@ figma.ui.onmessage = (msg) => {
                            box-shadow: none !important;
                          }
                        ` : ''}
-                       ${(compState !== 0 && isElementSpecimen) ? `
+                       ${(compState !== 0 && isElementSpecimen && comp.type !== 'fab') ? `
                          #specimen-wrapper-${comp.id} .md-button,
-                         #specimen-wrapper-${comp.id} .md-fab,
                          #specimen-wrapper-${comp.id} .md-chip,
                          #specimen-wrapper-${comp.id} .md-avatar {
                            background-color: transparent !important;
@@ -4322,7 +4321,7 @@ figma.ui.onmessage = (msg) => {
                           );
                         } else {
                           return (
-                            <div style={{ ...avatarStyle, backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}>
+                            <div style={{ ...avatarStyle, backgroundColor: comp.iconBgColor || 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}>
                               <span className="material-symbols-outlined" style={{ fontSize: iconPx }}>{localIcon}</span>
                             </div>
                           );
@@ -4721,6 +4720,7 @@ figma.ui.onmessage = (msg) => {
               </div>
             </div>
           )}
+          </div>
 
           {/* Global Interaction Clicks Layer */}
           {recordShowClicks && (
@@ -5254,15 +5254,15 @@ figma.ui.onmessage = (msg) => {
                 )}
 
                 {/* ICON / AVATAR BG COLOR */}
-                {(activeComp.configShowIcon || (activeComp.type === 'avatar' && activeComp.variant !== 'image')) && (
+                {activeComp.type === 'avatar' && activeComp.variant !== 'image' && (
                   <div className="flex items-center justify-between pb-3 border-b border-[#333]">
-                    <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">{activeComp.type === 'avatar' ? 'Avatar BG' : 'Icon Color'}</span>
+                    <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">Avatar BG</span>
                     <div className="flex items-center gap-1.5 bg-[#1E1E1E] px-2 py-1 rounded border border-neutral-800">
                       <input type="color"
-                        value={activeComp.iconBgColor || (activeComp.type === 'avatar' ? '#0061A4' : '#222222')}
+                        value={activeComp.iconBgColor || '#6750A4'}
                         onChange={(e) => updateActiveComponentField('iconBgColor', e.target.value)}
                         className="w-4 h-4 border-none p-0 bg-transparent cursor-pointer rounded" />
-                      <span className="text-[8.5px] font-mono text-neutral-400">{activeComp.iconBgColor || (activeComp.type === 'avatar' ? '#0061A4' : '#222222')}</span>
+                      <span className="text-[8.5px] font-mono text-neutral-400">{activeComp.iconBgColor || '#6750A4'}</span>
                     </div>
                   </div>
                 )}
