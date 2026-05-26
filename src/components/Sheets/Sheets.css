@@ -70,10 +70,10 @@
   margin: 0;
 }
 
-.md-bottom-sheet__close-btn {
+.md-bottom-sheet__close-btn, .md-bottom-sheet__close-btn .md-button, .md-bottom-sheet__close-btn .md-icon-button {
   border: none;
   background: none;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--md-sys-color-on-surface-variant) !important;
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;
@@ -152,10 +152,10 @@
   margin: 0;
 }
 
-.md-side-sheet__close-btn {
+.md-side-sheet__close-btn, .md-side-sheet__close-btn .md-button, .md-side-sheet__close-btn .md-icon-button {
   border: none;
   background: none;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--md-sys-color-on-surface-variant) !important;
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;

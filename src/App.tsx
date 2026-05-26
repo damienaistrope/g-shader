@@ -3680,8 +3680,8 @@ figma.ui.onmessage = (msg) => {
                         height: comp.heightMode === 'auto' ? 'auto' : `${comp.height}px`,
                         minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
                         minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
-                        borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
-                        boxShadow: dynamicGlow,
+                        borderRadius: comp.type === 'avatar' ? '50%' : comp.type === 'chip' ? '8px' : `${comp.borderRadius}px`,
+                        boxShadow: isElementSpecimen ? 'none' : dynamicGlow,
                         filter: containerFilter
                       }}
                       onMouseDown={(e) => handleMoveStart(e, comp.id)}
@@ -3727,14 +3727,14 @@ figma.ui.onmessage = (msg) => {
                         ['--edge-br' as any]: `${comp.borderRadius}px`,
                         ['--intensity' as any]: intensity,
                         ['--intensity-multiplier' as any]: intensity,
-                        backgroundColor: isElementSpecimen ? 'transparent' : compBgColor,
+                        backgroundColor: (isElementSpecimen || compState !== 0) ? 'transparent' : compBgColor,
                         filter: (isBoundaryWarped && isAnimationActive) ? 'url(#m3-energy-warp-filter)' : 'none',
-                        boxShadow: (isElementSpecimen && compState === 0)
+                        boxShadow: isElementSpecimen
                           ? 'none'
                           : isStateBlurred && isAnimationActive
                           ? `0 0 ${intensity * 12 + 6}px ${statusGlowColor}, inset 0 0 ${intensity * 6 + 2}px ${statusGlowColor}`
                           : compShadow,
-                        border: (isElementSpecimen && compState === 0)
+                        border: isElementSpecimen
                           ? 'none'
                           : compBorderColor !== 'transparent'
                           ? `1.5px solid ${compBorderColor}`
@@ -3754,7 +3754,7 @@ figma.ui.onmessage = (msg) => {
                             maxWidth: 'none',
                             filter: innerCanvasFilter,
                             zIndex: 0,
-                            opacity: 0.6,
+                            opacity: 1.0,
                           }}
                         >
                           <ShaderRenderer
@@ -3786,9 +3786,19 @@ figma.ui.onmessage = (msg) => {
                        .click-ripple-animate {
                          animation: clickRippleAnimation 0.9s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
                        }
-
+                       ${!isElementSpecimen && compState !== 0 ? `
+                         #specimen-wrapper-${comp.id} .md-card,
+                         #specimen-wrapper-${comp.id} .md-card--elevated,
+                         #specimen-wrapper-${comp.id} .md-card--filled,
+                         #specimen-wrapper-${comp.id} .md-card--outlined,
+                         #specimen-wrapper-${comp.id} .md-dialog,
+                         #specimen-wrapper-${comp.id} .md-bottom-sheet,
+                         #specimen-wrapper-${comp.id} .md-side-sheet {
+                           background-color: transparent !important;
+                           box-shadow: none !important;
+                         }
+                       ` : ''}
                      `}</style>
-
 
 
                     {/* =========================================================
@@ -3820,200 +3830,79 @@ figma.ui.onmessage = (msg) => {
 
                       {/* SPECIMEN: CARD */}
                       {comp.type === 'card' && (
-                        <M3Card 
+                        <M3Card
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
                           className="w-full h-full"
-                          style={{ borderRadius: `${comp.borderRadius}px` }}
+                          style={{ borderRadius: `${comp.borderRadius}px` } as React.CSSProperties}
                         >
                           {(comp.layout || 'vertical') === 'vertical' ? (
                             <>
-                              {/* Vertical Card Structure */}
-                              <div className="flex flex-col">
-                                {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
-                                  <M3CardHeader
-                                    avatar={comp.configShowIcon ? (
-                                      <div 
-                                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/10 shadow-sm select-none relative overflow-hidden"
-                                        style={{ backgroundColor: comp.iconBgColor || 'rgba(0,0,0,0.15)' }}
-                                      >
-                                        {((comp.avatarType || (comp.iconImage ? 'image' : 'icon')) === 'image' && comp.iconImage) ? (
-                                          <img referrerPolicy="no-referrer" src={comp.iconImage} className="w-full h-full object-cover" alt="Avatar" />
-                                        ) : (comp.avatarType || 'icon') === 'initials' ? (
-                                          <span className="text-[12px] font-sans font-bold text-white uppercase select-none leading-none tracking-wide">
-                                            {comp.avatarInitials || (comp.title ? comp.title.slice(0, 2).toUpperCase() : 'AV')}
-                                          </span>
-                                        ) : (
-                                          <span className="material-symbols-outlined text-[20px] leading-none text-white opacity-90">{localIcon}</span>
-                                        )}
-                                      </div>
-                                    ) : undefined}
-                                    header={comp.configShowTitle ? (
-                                      <span 
-                                        contentEditable
-                                        suppressContentEditableWarning
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                        className={`${titleFont.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
-                                        style={{ color: compTextColor }}
-                                      >
-                                        {comp.title}
-                                      </span>
-                                    ) : undefined}
-                                    subhead={comp.configShowSubtitle ? (
-                                      <span 
-                                        contentEditable
-                                        suppressContentEditableWarning
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                        className={`${M3_FONT_STYLES.bodySmall.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
-                                        style={{ color: compSubtextColor }}
-                                      >
-                                        {comp.subtitle}
-                                      </span>
-                                    ) : undefined}
-                                    action={
-                                      <div className="text-neutral-400 hover:text-neutral-250 p-1 cursor-pointer hover:bg-white/5 rounded-full">
-                                        <span className="material-symbols-outlined select-none" style={{ fontSize: '18px' }}>more_vert</span>
-                                      </div>
-                                    }
-                                  />
-                                )}
-                                
-                                {/* Large Media Block in Vertical card */}
-                                <M3CardMedia className="h-32 bg-neutral-200/5 dark:bg-neutral-800/40 relative overflow-hidden flex items-center justify-center border-y border-neutral-800/10 dark:border-white/5">
-                                  <span className="material-symbols-outlined text-[28px] opacity-25 text-neutral-400">image</span>
-                                </M3CardMedia>
- 
-                                {comp.configShowDescription && (
-                                  <M3CardContent className="flex-1 min-h-0 py-3.5 px-4 select-text">
-                                    <div className="text-[14px] font-bold font-sans mb-1" style={{ color: compTextColor }}>
-                                      {comp.variant ? comp.variant.charAt(0).toUpperCase() + comp.variant.slice(1) : 'Outlined'} Card
-                                    </div>
-                                    <div className="text-[11px] font-sans mb-2.5" style={{ color: compSubtextColor }}>Material 3 • Today</div>
-                                    <p 
-                                      contentEditable
-                                      suppressContentEditableWarning
+                              {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
+                                <M3CardHeader
+                                  avatar={comp.configShowIcon ? (
+                                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
+                                  ) : undefined}
+                                  header={comp.configShowTitle ? (
+                                    <span contentEditable suppressContentEditableWarning
                                       onMouseDown={(e) => e.stopPropagation()}
-                                      onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                      className={`${descFont.class} ${comp.heightMode === 'auto' ? '' : 'line-clamp-3'} leading-relaxed hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors`} 
-                                      style={{ color: compTextColor }}
-                                    >
-                                      {comp.text}
-                                    </p>
-                                  </M3CardContent>
-                                )}
-                              </div>
-
+                                      onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
+                                      onKeyDown={(e) => { if (e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                      style={{ outline: 'none', cursor: 'text', display: 'block' }}>
+                                      {comp.title}
+                                    </span>
+                                  ) : undefined}
+                                  subhead={comp.configShowSubtitle ? (
+                                    <span contentEditable suppressContentEditableWarning
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
+                                      onKeyDown={(e) => { if (e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                      style={{ outline: 'none', cursor: 'text', display: 'block' }}>
+                                      {comp.subtitle}
+                                    </span>
+                                  ) : undefined}
+                                  action={<span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--md-sys-color-on-surface-variant)', cursor: 'pointer' }}>more_vert</span>}
+                                />
+                              )}
+                              <M3CardMedia aspectRatio="16/9">
+                                <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                              </M3CardMedia>
+                              {comp.configShowDescription && (
+                                <M3CardContent
+                                  title={`${comp.variant ? comp.variant.charAt(0).toUpperCase()+comp.variant.slice(1) : 'Elevated'} Card`}
+                                  subtitle="Material 3 • Today"
+                                >
+                                  <span contentEditable suppressContentEditableWarning
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                                    onKeyDown={(e) => { if (e.key==='Enter'){e.preventDefault();(e.target as HTMLElement).blur();} }}
+                                    style={{ outline: 'none', cursor: 'text' }}>
+                                    {comp.text}
+                                  </span>
+                                </M3CardContent>
+                              )}
                               {comp.configShowActions && (
                                 <M3CardActions>
-                                  <div className="flex justify-end items-center gap-2 shrink-0 pt-2 border-t border-white/5 select-none w-full px-4 pb-4">
-                                    <M3Button 
-                                      variant="outlined" 
-                                      size="s"
-                                      className="rounded-full"
-                                      style={{ color: libColors.primary.bg, borderColor: libColors.primary.bg }}
-                                    >
-                                      Secondary
-                                    </M3Button>
-                                    <M3Button 
-                                      variant="filled" 
-                                      size="s"
-                                      className="rounded-full"
-                                      style={{ backgroundColor: libColors.primary.bg, color: libColors.primary.text }}
-                                    >
-                                      Action
-                                    </M3Button>
-                                  </div>
+                                  <M3Button variant="outlined" size="s">Secondary</M3Button>
+                                  <M3Button variant="filled" size="s">Action</M3Button>
                                 </M3CardActions>
                               )}
                             </>
                           ) : (
                             <>
-                              {/* Horizontal Card Structure per HORIZONTAL CARD SPECS */}
-                              <div className="flex flex-row w-full h-full items-stretch justify-between">
-                                <div className="flex-1 flex flex-col justify-between p-4 min-h-0 text-left">
-                                  {(comp.configShowIcon || comp.configShowTitle || comp.configShowSubtitle) && (
-                                    <div className="flex gap-3 items-center">
-                                      {comp.configShowIcon && (
-                                        <div 
-                                          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/10 shadow-sm select-none relative overflow-hidden mb-1"
-                                          style={{ backgroundColor: comp.iconBgColor || 'rgba(0,0,0,0.15)' }}
-                                        >
-                                          {((comp.avatarType || (comp.iconImage ? 'image' : 'icon')) === 'image' && comp.iconImage) ? (
-                                            <img referrerPolicy="no-referrer" src={comp.iconImage} className="w-full h-full object-cover" alt="Avatar" />
-                                          ) : (comp.avatarType || 'icon') === 'initials' ? (
-                                            <span className="text-[12px] font-sans font-bold text-white uppercase select-none leading-none tracking-wide">
-                                              {comp.avatarInitials || (comp.title ? comp.title.slice(0, 2).toUpperCase() : 'AV')}
-                                            </span>
-                                          ) : (
-                                            <span className="material-symbols-outlined text-[20px] leading-none text-white opacity-90">{localIcon}</span>
-                                          )}
-                                        </div>
-                                      )}
-                                      <div className="flex flex-col">
-                                        {comp.configShowTitle && (
-                                          <span 
-                                            contentEditable
-                                            suppressContentEditableWarning
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                            onBlur={(e) => updateComponentField(comp.id, 'title', e.currentTarget.innerText)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                            className={`${titleFont.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
-                                            style={{ color: compTextColor }}
-                                          >
-                                            {comp.title}
-                                          </span>
-                                        )}
-                                        {comp.configShowSubtitle && (
-                                          <span 
-                                            contentEditable
-                                            suppressContentEditableWarning
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                            onBlur={(e) => updateComponentField(comp.id, 'subtitle', e.currentTarget.innerText)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                            className={`${M3_FONT_STYLES.bodySmall.class} truncate hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors inline-block`} 
-                                            style={{ color: compSubtextColor }}
-                                          >
-                                            {comp.subtitle}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {comp.configShowDescription && (
-                                    <div className="my-2 select-text">
-                                      <p 
-                                        contentEditable
-                                        suppressContentEditableWarning
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                        className="text-[11.5px] leading-relaxed text-neutral-500 dark:text-neutral-400 line-clamp-2 hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors"
-                                        style={{ color: compTextColor }}
-                                      >
-                                        {comp.text}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {comp.configShowActions && (
-                                    <div className="flex justify-start items-center gap-2 select-none w-full mt-1">
-                                      <M3Button variant="outlined" size="xs" style={{ color: libColors.primary.bg, borderColor: libColors.primary.bg }}>Secondary</M3Button>
-                                      <M3Button variant="filled" size="xs" style={{ backgroundColor: libColors.primary.bg, color: libColors.primary.text }}>Action</M3Button>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Right Side Media Content aligned per Horizontal card spec */}
-                                <M3CardMedia className="w-[110px] bg-neutral-250/20 dark:bg-neutral-800/60 flex shrink-0 items-center justify-center border-l border-neutral-800/10 dark:border-white/5">
-                                  <span className="material-symbols-outlined text-[24px] opacity-25 text-neutral-400">image</span>
-                                </M3CardMedia>
-                              </div>
+                              <M3CardHeader
+                                avatar={comp.configShowIcon ? (
+                                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span>
+                                ) : undefined}
+                                header={comp.configShowTitle ? comp.title : undefined}
+                                subhead={comp.configShowSubtitle ? comp.subtitle : undefined}
+                              />
+                              {comp.configShowDescription && (
+                                <M3CardContent>{comp.text}</M3CardContent>
+                              )}
+                              <M3CardMedia aspectRatio="custom" style={{ width: '120px', flexShrink: 0, minHeight: '80px' } as React.CSSProperties}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                              </M3CardMedia>
                             </>
                           )}
                         </M3Card>
@@ -4276,13 +4165,23 @@ figma.ui.onmessage = (msg) => {
                       )}
 
                       {/* SPECIMEN: AVATAR */}
-                      {comp.type === 'avatar' && (
-                        <M3Avatar
-                          src={comp.avatarType === 'image' ? (comp.iconImage || undefined) : undefined}
-                          initials={comp.avatarType === 'initials' ? (comp.avatarInitials || comp.text?.slice(0,2)?.toUpperCase() || 'AV') : undefined}
-                          size={comp.sizePreset === 'xsmall' || comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'large' : 'medium'}
-                        />
-                      )}
+                      {comp.type === 'avatar' && (() => {
+                        const avatarSize = comp.sizePreset === 'xsmall' || comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'large' : 'medium';
+                        const avatarType = comp.avatarType || (comp.iconImage ? 'image' : 'icon');
+                        if (avatarType === 'image' && comp.iconImage) {
+                          return <M3Avatar src={comp.iconImage} size={avatarSize} />;
+                        } else if (avatarType === 'initials') {
+                          return <M3Avatar initials={comp.avatarInitials || comp.text?.slice(0,2)?.toUpperCase() || 'AV'} size={avatarSize} />;
+                        } else {
+                          const px = avatarSize === 'small' ? 32 : avatarSize === 'large' ? 56 : 40;
+                          const iconPx = avatarSize === 'small' ? 16 : avatarSize === 'large' ? 28 : 20;
+                          return (
+                            <div className="md-avatar" style={{ width: px, height: px, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)', flexShrink: 0 }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: iconPx }}>{localIcon}</span>
+                            </div>
+                          );
+                        }
+                      })()}
 
                       {/* SPECIMEN: PROGRESS */}
                       {comp.type === 'progress' && (
