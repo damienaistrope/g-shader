@@ -2282,6 +2282,7 @@ figma.ui.onmessage = (msg) => {
       hasBaseShaderBg = true;
     }
     else if (comp.type === 'progress') {
+      hasBaseShaderBg = false;
       bg = 'transparent';
       text = libColors.primary.bg;
       borderColor = 'transparent';
@@ -2831,7 +2832,19 @@ figma.ui.onmessage = (msg) => {
 
   const handleButtonClick = () => {
     if (!activeComp) return;
-    showToast(`Interact payload: Dispatched ${activeComp.name} event triggers!`);
+    const sizes: Array<'xsmall'|'small'|'medium'|'large'|'xlarge'> = ['xsmall','small','medium','large','xlarge'];
+    const cur = sizes.indexOf(activeComp.sizePreset as any);
+    const next = sizes[(cur + 1) % sizes.length];
+    const presets = M3_SIZE_PRESETS[activeComp.type as keyof typeof M3_SIZE_PRESETS];
+    if (presets && presets[next]) {
+      const { width, height, borderRadius } = presets[next];
+      updateComponentField(activeComp.id, 'sizePreset', next);
+      updateComponentField(activeComp.id, 'width', width);
+      updateComponentField(activeComp.id, 'height', height);
+      updateComponentField(activeComp.id, 'borderRadius', borderRadius);
+    } else {
+      showToast(`Interact: ${activeComp.name}`);
+    }
   };
 
   return (
@@ -3137,6 +3150,28 @@ figma.ui.onmessage = (msg) => {
                   );
                 })
               )}
+            </div>
+          </div>
+
+          {/* Section 3b: Global Theme (Color Library) */}
+          <div className="px-4 py-3 border-b border-[#1C1C1C] flex flex-col gap-2 shrink-0">
+            <span className="text-[10px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Theme</span>
+            <div className="relative">
+              <select
+                value={globalColorLibrary}
+                onChange={(e) => {
+                  setGlobalColorLibrary(e.target.value);
+                  showToast(`Theme: ${(M3_COLOR_LIBRARIES[e.target.value] as any)?.name || e.target.value}`);
+                }}
+                className="w-full bg-[#1E1E1E] text-neutral-200 border border-neutral-700/30 rounded px-2.5 py-1.5 text-xs focus:border-[#18A0FB] focus:outline-none appearance-none cursor-pointer font-sans h-8"
+              >
+                {Object.entries({ ...M3_COLOR_LIBRARIES }).map(([key, lib]) => (
+                  <option key={key} value={key}>{(lib as any).name}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center px-1.5 text-neutral-400">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </div>
             </div>
           </div>
 
@@ -3669,7 +3704,7 @@ figma.ui.onmessage = (msg) => {
                     <div 
                       key={comp.id}
                       id={`specimen-wrapper-${comp.id}`}
-                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 overflow-hidden ${
+                      className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing group/comp transition-[filter,box-shadow] duration-300 ${
                         (isSelected && !isRecording && recordingCountdown === null) ? 'ring-2 ring-[#18A0FB] ring-offset-2 ring-offset-[#1E1E1E] z-30' : (isRecording || recordingCountdown !== null ? 'z-20' : 'hover:ring-1 hover:ring-[#18A0FB]/50 z-20')
                       }`}
                       style={{
@@ -3678,10 +3713,11 @@ figma.ui.onmessage = (msg) => {
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
                         height: comp.heightMode === 'auto' ? 'auto' : `${comp.height}px`,
-                        minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
-                        minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
-                        borderRadius: comp.type === 'avatar' ? '50%' : comp.type === 'chip' ? '8px' : `${comp.borderRadius}px`,
+                        minWidth: isElementSpecimen ? 'auto' : '120px',
+                        minHeight: isElementSpecimen ? 'auto' : '60px',
+                        borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
                         boxShadow: isElementSpecimen ? 'none' : dynamicGlow,
+                        background: 'transparent',
                         filter: containerFilter
                       }}
                       onMouseDown={(e) => handleMoveStart(e, comp.id)}
@@ -3786,15 +3822,19 @@ figma.ui.onmessage = (msg) => {
                        .click-ripple-animate {
                          animation: clickRippleAnimation 0.9s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
                        }
-                       ${!isElementSpecimen && compState !== 0 ? `
+                       ${compState !== 0 ? `
                          #specimen-wrapper-${comp.id} .md-card,
                          #specimen-wrapper-${comp.id} .md-card--elevated,
                          #specimen-wrapper-${comp.id} .md-card--filled,
                          #specimen-wrapper-${comp.id} .md-card--outlined,
                          #specimen-wrapper-${comp.id} .md-dialog,
                          #specimen-wrapper-${comp.id} .md-bottom-sheet,
-                         #specimen-wrapper-${comp.id} .md-side-sheet {
+                         #specimen-wrapper-${comp.id} .md-side-sheet,
+                         #specimen-wrapper-${comp.id} .md-button,
+                         #specimen-wrapper-${comp.id} .md-fab,
+                         #specimen-wrapper-${comp.id} .md-chip {
                            background-color: transparent !important;
+                           background: transparent !important;
                            box-shadow: none !important;
                          }
                        ` : ''}
@@ -4185,19 +4225,19 @@ figma.ui.onmessage = (msg) => {
 
                       {/* SPECIMEN: PROGRESS */}
                       {comp.type === 'progress' && (
-                        <div className="w-full flex flex-col items-center justify-center gap-4 p-4">
-                          {comp.variant === 'circular' ? (
-                            <M3CircularProgress
-                              indeterminate={true}
-                              variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'}
-                            />
-                          ) : (
+                        comp.variant === 'circular' ? (
+                          <M3CircularProgress
+                            indeterminate={true}
+                            variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'}
+                          />
+                        ) : (
+                          <div className="w-full px-3">
                             <M3LinearProgress
                               indeterminate={true}
                               variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'}
                             />
-                          )}
-                        </div>
+                          </div>
+                        )
                       )}
 
                     </div>
@@ -4330,7 +4370,7 @@ figma.ui.onmessage = (msg) => {
                 {/* 2. Speed slider */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-[100px] max-w-[160px] flex-1">
                   <div className="flex items-center justify-between w-full gap-1">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden lg:block">Speed</span>
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden sm:block">Speed</span>
                     <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{intensity.toFixed(2)}×</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
@@ -4385,7 +4425,7 @@ figma.ui.onmessage = (msg) => {
                 {/* 6. Duration slider */}
                 <div className={`flex flex-col justify-between h-12 items-start shrink-0 min-w-[100px] max-w-[160px] flex-1 transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
                   <div className="flex items-center justify-between w-full gap-1">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden lg:block">Duration</span>
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden sm:block">Duration</span>
                     <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{exportDuration}s</span>
                   </div>
                   <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
