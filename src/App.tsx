@@ -3754,8 +3754,7 @@ figma.ui.onmessage = (msg) => {
                             maxWidth: 'none',
                             filter: innerCanvasFilter,
                             zIndex: 0,
-                            mixBlendMode: 'overlay' as const,
-                            opacity: Math.min(1, 0.75 + intensity * 0.2),
+                            opacity: 0.6,
                           }}
                         >
                           <ShaderRenderer

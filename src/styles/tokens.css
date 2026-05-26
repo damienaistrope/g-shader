@@ -121,7 +121,32 @@
   --md-sys-typescale-title-small-size:         14px;
   --md-sys-typescale-title-small-line-height:  20px;
   --md-sys-typescale-title-small-weight:       500;
+  /* ── Font family tokens (referenced by component CSS) ───────────────────── */
+  --md-sys-typescale-display-large-font:       'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-display-medium-font:      'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-display-small-font:       'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-headline-large-font:      'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-headline-medium-font:     'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-headline-small-font:      'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-title-large-font:         'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-title-medium-font:        'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-title-small-font:         'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
   --md-sys-typescale-body-large-font:          'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-body-medium-font:         'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-body-small-font:          'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-label-large-font:         'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-label-medium-font:        'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  --md-sys-typescale-label-small-font:         'Google Sans Flex Variable', 'Google Sans Flex', system-ui, sans-serif;
+  /* letter-spacing / tracking tokens */
+  --md-sys-typescale-label-large-tracking:     0.006em;
+  --md-sys-typescale-label-medium-tracking:    0.031em;
+  --md-sys-typescale-label-small-tracking:     0.031em;
+  --md-sys-typescale-body-large-tracking:      0.016em;
+  --md-sys-typescale-body-medium-tracking:     0.016em;
+  --md-sys-typescale-body-small-tracking:      0.025em;
+  --md-sys-typescale-title-large-tracking:     0;
+  --md-sys-typescale-title-medium-tracking:    0.009em;
+  --md-sys-typescale-title-small-tracking:     0.006em;
   --md-sys-typescale-body-large-size:          16px;
   --md-sys-typescale-body-large-line-height:   24px;
   --md-sys-typescale-body-large-weight:        400;
