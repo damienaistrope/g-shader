@@ -1,85 +1,30 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useId } from 'react';
 import './Selection.css';
-
-interface SelectionProps {
-  label?: string;
-  checked?: boolean;
-  disabled?: boolean;
-  error?: boolean;
-  onChange?: (checked: boolean) => void;
-  className?: string;
-}
-
-export const Checkbox: React.FC<SelectionProps & { indeterminate?: boolean }> = ({ 
-  label, 
-  checked = false, 
-  indeterminate = false,
-  disabled = false, 
-  error = false,
-  onChange,
-  className = ''
-}) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-
+import { Icon } from '../Icon/Icon';
+interface SelectionProps extends React.InputHTMLAttributes<HTMLInputElement> { label?: string; indeterminate?: boolean; error?: boolean; }
+export const Checkbox: React.FC<SelectionProps> = ({ label, indeterminate, error, disabled, className = '', id: pid, ...props }) => {
+  const gid = useId(); const id = pid || gid;
+  const ref = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => { if (ref.current) ref.current.indeterminate = !!indeterminate; }, [indeterminate]);
   return (
-    <label className={`md-selection md-selection--checkbox ${disabled ? 'md-selection--disabled' : ''} ${error ? 'md-selection--error' : ''} ${className}`}>
+    <div className={`md-selection md-selection--checkbox ${disabled ? 'md-selection--disabled' : ''} ${error ? 'md-selection--error' : ''} ${className}`}>
       <div className="md-selection__container">
-        <input 
-          ref={inputRef}
-          type="checkbox" 
-          className="md-selection__input"
-          checked={checked}
-          disabled={disabled}
-          onChange={(e) => onChange?.(e.target.checked)}
-        />
-        <div className="md-selection__control">
-          <div className="md-selection__halo" />
-          <svg className="md-selection__icon" viewBox="0 0 18 18" width="18" height="18" fill="none">
-            {indeterminate ? (
-              <path d="M4 9h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            ) : (
-              <path d="M4 9 L7.5 12 L14 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-          </svg>
-        </div>
+        <input ref={ref} id={id} type="checkbox" className="md-selection__input" disabled={disabled} {...props} />
+        <div className="md-selection__control"><div className="md-selection__icon"><Icon name={indeterminate ? 'remove' : 'check_small'} size={18} /></div></div>
       </div>
-      {label && <span className="md-selection__label">{label}</span>}
-    </label>
+      {label && <label htmlFor={id} className="md-selection__label">{label}</label>}
+    </div>
   );
 };
-
-export const RadioButton: React.FC<SelectionProps & { name?: string }> = ({ 
-  label, 
-  checked = false, 
-  disabled = false, 
-  error = false,
-  name,
-  onChange,
-  className = ''
-}) => {
+export const RadioButton: React.FC<SelectionProps> = ({ label, error, disabled, className = '', id: pid, ...props }) => {
+  const gid = useId(); const id = pid || gid;
   return (
-    <label className={`md-selection md-selection--radio ${disabled ? 'md-selection--disabled' : ''} ${error ? 'md-selection--error' : ''} ${className}`}>
+    <div className={`md-selection md-selection--radio ${disabled ? 'md-selection--disabled' : ''} ${error ? 'md-selection--error' : ''} ${className}`}>
       <div className="md-selection__container">
-        <input 
-          type="radio" 
-          name={name}
-          className="md-selection__input"
-          checked={checked}
-          disabled={disabled}
-          onChange={(e) => onChange?.(e.target.checked)}
-        />
-        <div className="md-selection__control">
-          <div className="md-selection__halo" />
-          <div className="md-selection__dot" />
-        </div>
+        <input id={id} type="radio" className="md-selection__input" disabled={disabled} {...props} />
+        <div className="md-selection__control"><div className="md-selection__dot" /></div>
       </div>
-      {label && <span className="md-selection__label">{label}</span>}
-    </label>
+      {label && <label htmlFor={id} className="md-selection__label">{label}</label>}
+    </div>
   );
 };
