@@ -3537,7 +3537,7 @@ figma.ui.onmessage = function(msg) {
 
          {/* CENTER CAMERA VIEWPORT: FIGMA EDITOR CANVAS */}
         <main 
-          className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 overflow-auto ${
+          className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 overflow-hidden ${
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
@@ -3835,7 +3835,7 @@ figma.ui.onmessage = function(msg) {
                         top: `calc(50% + ${comp.y}px)`,
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
-                        height: 'auto',
+                        height: `${comp.height}px`,
 
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
                         boxShadow: dynamicGlow
@@ -3999,7 +3999,7 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className="relative w-full z-10 pointer-events-auto"
+                      className={`relative w-full h-full z-10 flex flex-col pointer-events-auto ${['card','dialog','sheets'].includes(comp.type) ? 'items-stretch' : 'items-center justify-center'}`}
                       style={{ isolation: 'isolate' }}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
@@ -4033,7 +4033,7 @@ figma.ui.onmessage = function(msg) {
                         <M3Card
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
-                          style={{ borderRadius: `${comp.borderRadius}px`, width: '100%' } as any}
+                          style={{ width: '100%', height: '100%', borderRadius: `${comp.borderRadius}px` } as any}
                         >
                           <M3CardHeader
                             avatar={comp.configShowIcon ? <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span> : undefined}
