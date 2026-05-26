@@ -3537,7 +3537,7 @@ figma.ui.onmessage = function(msg) {
 
          {/* CENTER CAMERA VIEWPORT: FIGMA EDITOR CANVAS */}
         <main 
-          className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 overflow-hidden ${
+          className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 overflow-auto ${
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
@@ -3803,8 +3803,8 @@ figma.ui.onmessage = function(msg) {
 
                   // Compute physical card container blur (melts edges as per the API)
                   const energyBreath = isStateBlurred ? intensity : 0;
-                  const containerFilter_DISABLED = isStateBlurred ? `blur(${energyBreath * 0.8}px) saturate(${1 + energyBreath * 0.15})` : 'none';
-                  const containerScale_DISABLED = isStateBlurred ? `scale(${1 + energyBreath * 0.012})` : 'scale(1)';
+                  const containerFilter = isStateBlurred ? `blur(${energyBreath * 0.8}px) saturate(${1 + energyBreath * 0.15})` : 'none';
+                  const containerScale = isStateBlurred ? `scale(${1 + energyBreath * 0.012})` : 'scale(1)';
 
                   // Compute inner WebGL simulation canvas blur for fluid liquid bloom (shader itself computes localized edge blurs, so keep canvas sharp & details visible)
                   const innerCanvasFilter = isStateBlurred 
@@ -3835,9 +3835,8 @@ figma.ui.onmessage = function(msg) {
                         top: `calc(50% + ${comp.y}px)`,
                         transform: 'translate(-50%, -50%)',
                         width: comp.sizeMode === 'auto' ? 'auto' : `${comp.width}px`,
-                        height: `${comp.height}px`,
-                        minWidth: comp.sizeMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '220px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '72px')) : undefined,
-                        minHeight: comp.heightMode === 'auto' ? (comp.type === 'card' || comp.type === 'dialog' || comp.type === 'sheets' ? '110px' : (['avatar', 'fab', 'badge', 'progress'].includes(comp.type) ? 'auto' : '20px')) : undefined,
+                        height: 'auto',
+
                         borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
                         boxShadow: dynamicGlow
                       }}
@@ -3864,11 +3863,9 @@ figma.ui.onmessage = function(msg) {
                   {/* ── ENERGY + SURFACE LAYER — acts as one unit ── */}
                   {/* Content sits in a separate z-layer above and is never blurred */}
                   <div
-                    className="absolute inset-0 pointer-events-none transition-[filter,transform] duration-500"
+                    className="absolute inset-0 pointer-events-none"
                     style={{
                       borderRadius: comp.type === 'avatar' ? '50%' : `${comp.borderRadius}px`,
-                      transform: containerScale,
-                      filter: 'none',
                       zIndex: 0,
                       overflow: 'hidden',
                     }}
@@ -4002,8 +3999,8 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className="relative w-full h-full z-10 pointer-events-auto"
-                      style={{ isolation: 'isolate', display: 'flex', flexDirection: 'column', alignItems: ['card','dialog','sheets'].includes(comp.type) ? 'stretch' : 'center', justifyContent: ['card','dialog','sheets'].includes(comp.type) ? 'flex-start' : 'center' }}
+                      className="relative w-full z-10 pointer-events-auto"
+                      style={{ isolation: 'isolate' }}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
                       {/* SPECIMEN: BUTTON */}
@@ -4036,8 +4033,7 @@ figma.ui.onmessage = function(msg) {
                         <M3Card
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
-                          className="w-full h-full"
-                          style={{ borderRadius: `${comp.borderRadius}px` } as any}
+                          style={{ borderRadius: `${comp.borderRadius}px`, width: '100%' } as any}
                         >
                           <M3CardHeader
                             avatar={comp.configShowIcon ? <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{localIcon}</span> : undefined}
