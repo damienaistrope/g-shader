@@ -876,7 +876,7 @@ figma.ui.onmessage = function(msg) {
     } else if (type === 'card') {
       name = `❖ Card ${Math.floor(Math.random() * 90) + 10}`;
       width = 300;
-      height = 360;
+      height = 400;
       borderRadius = 16;
       text = "Continuous wave rendering is active.";
       title = "Card Title";
@@ -3936,8 +3936,8 @@ figma.ui.onmessage = function(msg) {
                         PRECISE CLEAN MATERIAL 3 COMPONENT SPECIMEN
                         ========================================================= */}
                     <div 
-                      className={`relative w-full z-10 flex flex-col pointer-events-auto ${
-                        ['card','dialog','sheets'].includes(comp.type) ? 'items-stretch' : 'h-full items-center justify-center'
+                      className={`relative w-full h-full z-10 flex flex-col pointer-events-auto ${
+                        ['card','dialog','sheets'].includes(comp.type) ? 'items-stretch' : 'items-center justify-center'
                       }`}
                       onMouseDown={(e) => handleSpecimenClick(e, comp.id)}
                     >
@@ -3972,6 +3972,7 @@ figma.ui.onmessage = function(msg) {
                         <M3Card
                           variant={(comp.variant as any) || 'elevated'}
                           layout={comp.layout || 'vertical'}
+                          className="h-full"
                         >
                           {(comp.layout || 'vertical') === 'vertical' ? (
                             <>

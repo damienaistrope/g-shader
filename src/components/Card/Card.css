@@ -6,6 +6,8 @@
   position: relative;
   background-color: var(--md-sys-color-surface);
   transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+  width: 100%;
+  height: 100%;
 }
 
 .md-card--horizontal {
@@ -27,27 +29,18 @@
   background-color: var(--md-sys-color-surface);
 }
 
-.md-card--interactive {
-  cursor: pointer;
-}
-
-.md-card--interactive:hover {
-  box-shadow: var(--md-sys-elevation-2);
-}
+.md-card--interactive { cursor: pointer; }
+.md-card--interactive:hover { box-shadow: var(--md-sys-elevation-2); }
 
 .md-card__state-layer {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background-color: var(--md-sys-color-on-surface);
   opacity: 0;
   transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1);
   pointer-events: none;
   z-index: 1;
 }
-
 .md-card--interactive:hover .md-card__state-layer {
   opacity: var(--md-sys-state-hover-state-layer-opacity);
 }
@@ -58,8 +51,8 @@
   gap: 16px;
   align-items: center;
   min-height: 72px;
+  flex-shrink: 0;
 }
-
 .md-card--horizontal .md-card__header {
   flex: 1;
   min-height: unset;
@@ -75,18 +68,18 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .md-card__header-text {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .md-card__header-title {
-  font-family: var(--md-sys-typescale-title-medium-font);
   font-size: var(--md-sys-typescale-title-medium-size);
   color: var(--md-sys-color-on-surface);
   font-weight: 500;
@@ -94,45 +87,42 @@
 }
 
 .md-card__header-subhead {
-  font-family: var(--md-sys-typescale-body-medium-font);
   font-size: var(--md-sys-typescale-body-medium-size);
   color: var(--md-sys-color-on-surface-variant);
-  line-height: 16px;
+  line-height: 20px;
+}
+
+.md-card__header-action {
+  flex-shrink: 0;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .md-card__media {
-  background-color: #eaeef5;
+  background-color: var(--md-sys-color-surface-container-high);
   position: relative;
   overflow: hidden;
   width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.md-card__media--16-9 { aspect-ratio: 16/9; }
+.md-card__media--4-3  { aspect-ratio: 4/3; }
+.md-card__media--1-1  { aspect-ratio: 1/1; }
 
 .md-card--horizontal .md-card__media {
-  width: auto;
-  min-width: 80px;
+  width: 120px;
   flex-shrink: 0;
 }
 
-.md-card--horizontal .md-card__media:first-child {
-  border-radius: var(--md-sys-shape-m) 0 0 var(--md-sys-shape-m);
-}
-
-.md-card--horizontal .md-card__media:last-child {
-  border-radius: 0 var(--md-sys-shape-m) var(--md-sys-shape-m) 0;
-}
-
-.md-card__media--16-9 { aspect-ratio: 16/9; }
-.md-card__media--4-3 { aspect-ratio: 4/3; }
-.md-card__media--1-1 { aspect-ratio: 1/1; }
-
 .md-card__content {
   padding: 16px;
-  font-family: var(--md-sys-typescale-body-medium-font);
   font-size: var(--md-sys-typescale-body-medium-size);
   color: var(--md-sys-color-on-surface-variant);
   flex: 1;
+  overflow: hidden;
 }
-
 .md-card--horizontal .md-card__content {
   display: flex;
   flex-direction: column;
@@ -140,34 +130,23 @@
   padding: 16px 20px;
 }
 
-.md-card__content-header {
-  margin-bottom: 12px;
-}
-
-.md-card--horizontal .md-card__content-header {
-  margin-bottom: 8px;
-}
-
+.md-card__content-header { margin-bottom: 8px; }
 .md-card__content-headline {
   font-size: 14px;
   color: var(--md-sys-color-primary);
   margin-bottom: 2px;
 }
-
 .md-card__content-title {
-  font-family: var(--md-sys-typescale-title-large-font);
   font-size: var(--md-sys-typescale-title-large-size);
   color: var(--md-sys-color-on-surface);
   line-height: 28px;
+  font-weight: 400;
 }
-
 .md-card__content-subtitle {
-  font-family: var(--md-sys-typescale-body-medium-font);
   font-size: var(--md-sys-typescale-body-medium-size);
   color: var(--md-sys-color-on-surface-variant);
   line-height: 20px;
 }
-
 .md-card__content-body {
   font-size: 14px;
   line-height: 20px;
@@ -179,8 +158,8 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex-shrink: 0;
 }
-
 .md-card--horizontal .md-card__actions {
   padding: 0 8px 8px 12px;
   justify-content: flex-start;
