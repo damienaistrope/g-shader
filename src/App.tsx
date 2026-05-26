@@ -3428,7 +3428,21 @@ figma.ui.onmessage = (msg) => {
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
-          style={isBackdropVisible && activeBackdrop === 'solid' ? { backgroundColor: backdropSolidColor } : undefined}
+          data-theme={canvasBgMode}
+          style={{
+            ...(isBackdropVisible && activeBackdrop === 'solid' ? { backgroundColor: backdropSolidColor } : {}),
+            // Inject theme tokens so all md- components pick up the active color library
+            '--md-sys-color-primary': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].primary.bg; })(),
+            '--md-sys-color-on-primary': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].primary.text; })(),
+            '--md-sys-color-primary-container': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].secondary.bg; })(),
+            '--md-sys-color-on-primary-container': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].secondary.text; })(),
+            '--md-sys-color-secondary-container': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].secondary.bg; })(),
+            '--md-sys-color-on-secondary-container': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].secondary.text; })(),
+            '--md-sys-color-surface': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].surface.bg; })(),
+            '--md-sys-color-surface-container-low': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].surface.bg; })(),
+            '--md-sys-color-on-surface': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].surface.text; })(),
+            '--md-sys-color-on-surface-variant': (() => { const k = globalColorLibrary||'baseline-blue'; const lib=(customLibraries[k]||M3_COLOR_LIBRARIES[k]||M3_COLOR_LIBRARIES['baseline-blue']); return lib.colors[canvasBgMode].surface.subtext; })(),
+          } as React.CSSProperties}
           onMouseDown={(e) => {
             window.focus();
             if (e.target === e.currentTarget) {
@@ -3745,7 +3759,7 @@ figma.ui.onmessage = (msg) => {
                         ['--edge-br' as any]: `${comp.borderRadius}px`,
                         ['--intensity' as any]: intensity,
                         ['--intensity-multiplier' as any]: intensity,
-                        backgroundColor: (isElementSpecimen && compState === 0) ? 'transparent' : compBgColor,
+                        backgroundColor: compState !== 0 ? 'transparent' : (isElementSpecimen ? 'transparent' : compBgColor),
                         filter: (isBoundaryWarped && isAnimationActive) ? 'url(#m3-energy-warp-filter)' : 'none',
                         boxShadow: (isElementSpecimen && compState === 0)
                           ? 'none'
@@ -4072,15 +4086,12 @@ figma.ui.onmessage = (msg) => {
                           isOpen={true} 
                           onClose={() => {}} 
                           static={true}
-                          className="w-full h-full bg-transparent! border-none! shadow-none!"
+                          className="w-full h-full"
                           style={{
                             width: '100%',
                             height: '100%',
                             maxWidth: 'none',
                             maxHeight: 'none',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            boxShadow: 'none',
                             borderRadius: 'inherit',
                             margin: 0
                           }}
@@ -4230,7 +4241,7 @@ figma.ui.onmessage = (msg) => {
                               )}
                               static={true}
                               position="right"
-                              className="w-full h-full bg-transparent! border-none! shadow-none!"
+                              className="w-full h-full"
                               style={{
                                 width: '100%',
                                 height: '100%',
@@ -4272,7 +4283,7 @@ figma.ui.onmessage = (msg) => {
                                 </span>
                               )}
                               static={true}
-                              className="w-full h-full bg-transparent! border-none! shadow-none!"
+                              className="w-full h-full"
                               style={{
                                 width: '100%',
                                 height: '100%',
@@ -4302,45 +4313,30 @@ figma.ui.onmessage = (msg) => {
 
                       {/* SPECIMEN: AVATAR */}
                       {comp.type === 'avatar' && (
-                        <div className="w-full h-full flex items-center justify-center" style={{ borderRadius: 'inherit' }}>
-                          <M3Avatar 
-                            src={(comp.variant === 'image') ? (comp.iconImage || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop") : undefined}
-                            initials={(comp.variant === 'initials' || !comp.variant) ? comp.text : undefined}
-                            size={comp.sizePreset === 'xsmall' ? 'small' : comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'medium' ? 'medium' : 'large'}
-                            className="w-full h-full rounded-full"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              boxShadow: 'none',
-                              borderRadius: '50%'
-                            }}
-                          />
-                        </div>
+                        <M3Avatar
+                          src={comp.avatarType === 'image' ? (comp.iconImage || undefined) : undefined}
+                          initials={comp.avatarType === 'initials' ? (comp.avatarInitials || comp.text?.slice(0,2)?.toUpperCase() || 'AV') : undefined}
+                          size={comp.sizePreset === 'xsmall' || comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'large' : 'medium'}
+                        />
                       )}
 
                       {/* SPECIMEN: PROGRESS */}
                       {comp.type === 'progress' && (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-3" style={{ borderRadius: 'inherit' }}>
+                        <div className="w-full flex flex-col items-center justify-center gap-4 p-4">
                           {comp.variant === 'circular' ? (
-                            <M3CircularProgress 
-                              indeterminate={true} 
-                              variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'} 
-                              energyColorStart={compMidColor}
-                              energyColorEnd={compEndColor}
+                            <M3CircularProgress
+                              indeterminate={true}
+                              variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'}
                             />
                           ) : (
-                            <div className="w-full">
-                              <M3LinearProgress 
-                                indeterminate={true} 
-                                variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'} 
-                                energyColorStart={compMidColor}
-                                energyColorEnd={compEndColor}
-                              />
-                            </div>
+                            <M3LinearProgress
+                              indeterminate={true}
+                              variant={comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'thick' : 'standard'}
+                            />
                           )}
                         </div>
+                      )}
+
                       )}
                     </div>
                   </div>
@@ -4455,157 +4451,89 @@ figma.ui.onmessage = (msg) => {
                 FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
                 ========================================================================================= */}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
-              <div className="flex items-center justify-between w-full max-w-[1400px] mx-auto gap-4">
-                
-                {/* 1. Motion */}
+              <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-3 overflow-x-auto">
+
+                {/* 1. Motion — Pause/Play */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0">
-                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
-                    Motion
-                  </span>
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">Motion</span>
                   <button
-                    onClick={() => {
-                      setIsAnimationActive(!isAnimationActive);
-                      showToast(isAnimationActive ? "Motion paused." : "Motion resumed.");
-                    }}
-                    className={`h-[28px] w-24 px-3 rounded-md text-[9.5px] font-sans font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer border select-none transition-all ${
-                      isAnimationActive 
-                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/20 hover:bg-rose-500/25' 
-                        : 'bg-[#18A0FB]/15 text-[#18A0FB] border-[#18A0FB]/20 hover:bg-[#18A0FB]/25'
-                    }`}
+                    onClick={() => { setIsAnimationActive(!isAnimationActive); showToast(isAnimationActive ? "Motion paused." : "Motion resumed."); }}
+                    className={`h-8 px-3 rounded-md text-[9.5px] font-sans font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer border select-none transition-all whitespace-nowrap ${isAnimationActive ? 'bg-rose-500/15 text-rose-400 border-rose-500/20 hover:bg-rose-500/25' : 'bg-[#18A0FB]/15 text-[#18A0FB] border-[#18A0FB]/20 hover:bg-[#18A0FB]/25'}`}
                   >
                     {isAnimationActive ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                     <span>{isAnimationActive ? 'Pause' : 'Play'}</span>
                   </button>
                 </div>
-  
-                {/* 2. Speed */}
-                <div className="flex flex-col justify-end h-12 items-start shrink-0 w-[190px]">
-                  <div className="h-8 flex bg-[#1E1E1E] px-2.5 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2.5 select-none animate-fade-in">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
-                      Speed
-                    </span>
-                    <input
-                      type="range"
-                      min="0.10"
-                      max="1.50"
-                      step="0.05"
-                      value={intensity}
+
+                {/* 2. Speed slider */}
+                <div className="flex flex-col justify-between h-12 items-start shrink-0 min-w-[100px] max-w-[160px] flex-1">
+                  <div className="flex items-center justify-between w-full gap-1">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden lg:block">Speed</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{intensity.toFixed(2)}×</span>
+                  </div>
+                  <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
+                    <input type="range" min="0.10" max="1.50" step="0.05" value={intensity}
                       onChange={(e) => setIntensity(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
-                      title="Adjust animation speed"
-                    />
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none text-right shrink-0 min-w-[32px]">
-                      {intensity.toFixed(2)}X
-                    </span>
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0" />
                   </div>
                 </div>
-  
+
                 {/* 3. Loop */}
-                <div className={`flex flex-col justify-between h-12 items-start transition-all duration-300 shrink-0 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
-                    Loop
-                  </span>
-                  <div className="h-8 flex items-center justify-start">
-                    <button
-                      onClick={() => {
-                        setPerfectLoop(!perfectLoop);
-                        showToast(!perfectLoop ? "Perfect loop export enabled!" : "Standard loop output.");
-                      }}
-                      className="h-8 w-11 bg-[#1E1E1E] rounded-md flex items-center justify-center cursor-pointer select-none transition-all font-sans border border-neutral-800"
-                      title="Toggle perfect looping mode"
-                    >
+                <div className={`flex flex-col justify-between h-12 items-start shrink-0 transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">Loop</span>
+                  <div className="h-8 flex items-center">
+                    <button onClick={() => { setPerfectLoop(!perfectLoop); }}
+                      className="h-8 w-11 bg-[#1E1E1E] rounded-md flex items-center justify-center cursor-pointer select-none border border-neutral-800">
                       <div className={`w-7 h-4 rounded-full p-0.5 transition-colors ${perfectLoop ? 'bg-[#18A0FB]' : 'bg-neutral-700'}`}>
                         <div className={`w-3 h-3 bg-white rounded-full shadow-md transform transition-transform ${perfectLoop ? 'translate-x-3' : 'translate-x-0'}`} />
                       </div>
                     </button>
                   </div>
                 </div>
-  
+
                 {/* 4. Pointer */}
-                <div className={`flex flex-col justify-between h-12 items-start transition-all duration-300 shrink-0 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
-                    Pointer
-                  </span>
-                  <div className="h-8 flex bg-[#1E1E1E] p-0.5 rounded-md border border-neutral-800 shrink-0 items-center justify-center gap-[2px]">
-                    <button
-                      onClick={() => {
-                        setRecordShowCursor(!recordShowCursor);
-                        showToast(recordShowCursor ? "Pointer hidden in export." : "Pointer visible in export.");
-                      }}
-                      className={`text-[9.5px] font-sans px-3 h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer border-none ${
-                        recordShowCursor 
-                           ? 'bg-[#18A0FB] text-white shadow' 
-                          : 'text-neutral-400 hover:text-neutral-200'
-                      }`}
-                      title="Toggle cursor visibility"
-                    >
+                <div className={`flex flex-col justify-between h-12 items-start shrink-0 transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">Pointer</span>
+                  <div className="h-8 flex bg-[#1E1E1E] p-0.5 rounded-md border border-neutral-800 items-center gap-[2px]">
+                    <button onClick={() => setRecordShowCursor(!recordShowCursor)}
+                      className={`text-[9.5px] font-sans px-3 h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer border-none whitespace-nowrap ${recordShowCursor ? 'bg-[#18A0FB] text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}>
                       Cursor
                     </button>
-                    <button
-                      onClick={() => {
-                        setRecordShowClicks(!recordShowClicks);
-                        showToast(recordShowClicks ? "Tap highlights hidden." : "Tap highlights included.");
-                      }}
-                      className={`text-[9.5px] font-sans px-3 h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer border-none ${
-                        recordShowClicks 
-                          ? 'bg-[#18A0FB] text-white shadow' 
-                          : 'text-neutral-400 hover:text-neutral-200'
-                      }`}
-                      title="Toggle click wave ripples"
-                    >
+                    <button onClick={() => setRecordShowClicks(!recordShowClicks)}
+                      className={`text-[9.5px] font-sans px-3 h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer border-none whitespace-nowrap ${recordShowClicks ? 'bg-[#18A0FB] text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}>
                       Clicks
                     </button>
                   </div>
                 </div>
-   
+
                 {/* 5. Format */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0">
-                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
-                    Format
-                  </span>
-                  <div className="h-8 flex bg-[#1E1E1E] p-0.5 rounded-md border border-neutral-800 shrink-0 items-center justify-center">
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">Format</span>
+                  <div className="h-8 flex bg-[#1E1E1E] p-0.5 rounded-md border border-neutral-800 items-center">
                     {(['mp4', 'png', 'gif'] as const).map((fmt) => (
-                      <button
-                        key={fmt}
-                        onClick={() => {
-                          if (!isRecording) setExportFormat(fmt);
-                        }}
-                        className={`text-[9.5px] font-sans px-3 h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer ${
-                          exportFormat === fmt 
-                            ? 'bg-[#18A0FB] text-white shadow' 
-                            : 'text-neutral-400 hover:text-neutral-200'
-                        }`}
-                        disabled={isRecording}
-                      >
+                      <button key={fmt} onClick={() => { if (!isRecording) setExportFormat(fmt); }}
+                        className={`text-[9.5px] font-sans px-3 h-full flex items-center justify-center font-bold rounded-sm transition-all cursor-pointer whitespace-nowrap ${exportFormat === fmt ? 'bg-[#18A0FB] text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}
+                        disabled={isRecording}>
                         {fmt.toUpperCase()}
                       </button>
                     ))}
                   </div>
                 </div>
-   
-                {/* 6. Duration */}
-                <div className={`flex flex-col justify-end h-12 items-start transition-all duration-300 shrink-0 w-[190px] ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
-                  <div className="h-8 flex bg-[#1E1E1E] px-2.5 rounded-md border border-neutral-800 shrink-0 items-center w-full gap-2.5 select-none">
-                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none shrink-0">
-                      Duration
-                    </span>
-                    <input
-                      type="range"
-                      min="1"
-                      max="20"
-                      step="1"
-                      value={exportDuration}
+
+                {/* 6. Duration slider */}
+                <div className={`flex flex-col justify-between h-12 items-start shrink-0 min-w-[100px] max-w-[160px] flex-1 transition-all duration-300 ${exportFormat === 'png' ? 'opacity-0 pointer-events-none' : ''}`}>
+                  <div className="flex items-center justify-between w-full gap-1">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none hidden lg:block">Duration</span>
+                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none">{exportDuration}s</span>
+                  </div>
+                  <div className="h-8 flex bg-[#1E1E1E] px-2 rounded-md border border-neutral-800 items-center w-full gap-2 select-none">
+                    <input type="range" min="1" max="20" step="1" value={exportDuration}
                       onChange={(e) => setExportDuration(Number(e.target.value))}
-                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
-                      disabled={isRecording}
-                      title="Adjust clip duration"
-                     />
-                    <span className="font-mono text-[9.5px] font-bold text-[#18A0FB] leading-none text-right shrink-0 min-w-[20px]">
-                      {exportDuration}S
-                    </span>
+                      className="flex-1 h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB] min-w-0"
+                      disabled={isRecording} />
                   </div>
                 </div>
-   
+
                 {/* 7. Action bundle: Capture Spec & Recording active sub-controllers */}
                 <div className="flex flex-col justify-between h-12 items-start shrink-0">
                   <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none select-none">
