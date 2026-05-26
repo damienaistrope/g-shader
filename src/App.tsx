@@ -4337,7 +4337,6 @@ figma.ui.onmessage = (msg) => {
                         </div>
                       )}
 
-                      )}
                     </div>
                   </div>
 
