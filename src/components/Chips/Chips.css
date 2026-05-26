@@ -5,7 +5,7 @@
   height: 100%;
   width: 100%;
   padding: 0 16px;
-  border-radius: inherit; /* Inherit border radius from preset settings */
+  border-radius: var(--md-sys-shape-s, 8px); /* M3 chip corner radius */
   border: 1px solid var(--md-sys-color-outline);
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);

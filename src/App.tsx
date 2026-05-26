@@ -906,6 +906,7 @@ figma.ui.onmessage = (msg) => {
       activeState: 0,
       previousState: 0,
       transitionVal: 1.0,
+      compIntensity: ['card','dialog','sheets'].includes(type) ? 0.75 : 0.5,
     };
 
     setCanvasComponents(prev => [...prev, newComp]);
@@ -1316,6 +1317,7 @@ figma.ui.onmessage = (msg) => {
         updateActiveComponentField('colorLibrary', libraryId);
       } else {
         setGlobalColorLibrary(libraryId);
+        setCanvasComponents(prev => prev.map(c => ({ ...c, colorLibrary: libraryId })));
       }
 
       setNewLibName('');
@@ -2247,14 +2249,14 @@ figma.ui.onmessage = (msg) => {
         shadow = '0px 3px 6px rgba(0, 0, 0, 0.15)';
         hasBaseShaderBg = true;
       } else if (variant === 'surface') {
-        bg = libColors.surface.bg;
+        bg = canvasBgMode === 'dark' ? '#2B2930' : '#ECE6F0';  // surface FAB tonal
         text = libColors.primary.bg;
         shadow = '0px 3px 6px rgba(0, 0, 0, 0.15)';
         hasBaseShaderBg = true;
       }
     }
     else if (comp.type === 'dialog') {
-      bg = libColors.surface.bg;
+      bg = canvasBgMode === 'dark' ? '#2B2930' : '#ECE6F0';  // surface FAB tonal
       text = libColors.surface.text;
       subtext = libColors.surface.subtext;
       shadow = '0px 24px 38px rgba(0,0,0,0.3)';
@@ -2279,7 +2281,7 @@ figma.ui.onmessage = (msg) => {
       }
     }
     else if (comp.type === 'sheets') {
-      bg = libColors.surface.bg;
+      bg = canvasBgMode === 'dark' ? '#2B2930' : '#ECE6F0';  // surface FAB tonal
       text = libColors.surface.text;
       subtext = libColors.surface.subtext;
       shadow = '0px 16px 24px rgba(0,0,0,0.2)';
@@ -3202,8 +3204,10 @@ figma.ui.onmessage = (msg) => {
               <select
                 value={globalColorLibrary}
                 onChange={(e) => {
-                  setGlobalColorLibrary(e.target.value);
-                  showToast(`Theme: ${(M3_COLOR_LIBRARIES[e.target.value] as any)?.name || e.target.value}`);
+                  const newTheme = e.target.value;
+                  setGlobalColorLibrary(newTheme);
+                  setCanvasComponents(prev => prev.map(c => ({ ...c, colorLibrary: newTheme })));
+                  showToast(`Theme: ${(M3_COLOR_LIBRARIES[newTheme] as any)?.name || newTheme}`);
                 }}
                 className="w-full bg-[#1E1E1E] text-neutral-200 border border-neutral-700/30 rounded px-2.5 py-1.5 text-xs focus:border-[#18A0FB] focus:outline-none appearance-none cursor-pointer font-sans h-8"
               >
@@ -4136,21 +4140,9 @@ figma.ui.onmessage = (msg) => {
                             </span>
                           ) : undefined}
                           actions={comp.configShowActions ? (
-                            <div className="flex items-center justify-end gap-3 pt-3 select-none shrink-0 w-full">
-                              <M3Button 
-                                variant="text"
-                                size="s"
-                                style={{ color: libColors.primary.bg }}
-                              >
-                                Cancel
-                              </M3Button>
-                              <M3Button 
-                                variant="text"
-                                size="s"
-                                style={{ color: libColors.primary.bg, fontWeight: 'bold' }}
-                              >
-                                {comp.variant === 'scrollable' ? 'Ok' : 'Action'}
-                              </M3Button>
+                            <div className="flex items-center justify-end gap-2 w-full">
+                              <M3Button variant="text">Cancel</M3Button>
+                              <M3Button variant="text">{comp.variant === 'scrollable' ? 'Ok' : 'Action'}</M3Button>
                             </div>
                           ) : undefined}
                         >
@@ -4311,17 +4303,33 @@ figma.ui.onmessage = (msg) => {
 
                       {/* SPECIMEN: AVATAR */}
                       {comp.type === 'avatar' && (() => {
-                        const avatarSize = comp.sizePreset === 'xsmall' || comp.sizePreset === 'small' ? 'small' : comp.sizePreset === 'large' || comp.sizePreset === 'xlarge' ? 'large' : 'medium';
-                        const avatarType = comp.avatarType || (comp.iconImage ? 'image' : 'icon');
+                        // Use comp.variant for type (icon/initials/image), resize with comp.width
+                        const avatarType = comp.variant || comp.avatarType || (comp.iconImage ? 'image' : 'icon');
+                        const sz = comp.width || 40;
+                        const iconPx = Math.round(sz * 0.5);
+                        const avatarStyle: React.CSSProperties = {
+                          width: sz, height: sz,
+                          borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          position: 'relative',
+                        };
                         if (avatarType === 'image' && comp.iconImage) {
-                          return <M3Avatar src={comp.iconImage} size={avatarSize} />;
-                        } else if (avatarType === 'initials') {
-                          return <M3Avatar initials={comp.avatarInitials || comp.text?.slice(0,2)?.toUpperCase() || 'AV'} size={avatarSize} />;
-                        } else {
-                          const px = avatarSize === 'small' ? 32 : avatarSize === 'large' ? 56 : 40;
-                          const iconPx = avatarSize === 'small' ? 16 : avatarSize === 'large' ? 28 : 20;
                           return (
-                            <div className="md-avatar" style={{ width: px, height: px, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)', flexShrink: 0 }}>
+                            <div style={{ ...avatarStyle, backgroundColor: 'var(--md-sys-color-primary-container)' }}>
+                              <img src={comp.iconImage} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
+                            </div>
+                          );
+                        } else if (avatarType === 'initials') {
+                          return (
+                            <div style={{ ...avatarStyle, backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)', fontSize: Math.round(sz * 0.35), fontWeight: 500 }}>
+                              {comp.avatarInitials || comp.title?.slice(0,2)?.toUpperCase() || 'AV'}
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div style={{ ...avatarStyle, backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)' }}>
                               <span className="material-symbols-outlined" style={{ fontSize: iconPx }}>{localIcon}</span>
                             </div>
                           );
@@ -4734,120 +4742,229 @@ figma.ui.onmessage = (msg) => {
           <div className="flex-1 p-4 space-y-4 overflow-y-auto" id="inspector-body-content" style={{ maxHeight: 'calc(100vh - 40px)' }}>
             
             {!activeComp ? null : (
-              {/* 2. Style & Type Specific Fields */}
-              <div className="flex flex-col gap-5">
-                {/* Energy Intensity per component */}
-                <div className="space-y-1.5 pb-3 border-b border-[#333333]">
-                  <div className="flex justify-between items-center text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider leading-none">
+              <div className="flex flex-col gap-4">
+
+                {/* ENERGY INTENSITY */}
+                <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                  <div className="flex justify-between items-center text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">
                     <span>Energy Intensity</span>
-                    <span className="font-mono text-[10px] font-bold text-[#18A0FB]">
-                      {((activeComp.compIntensity ?? intensity) * 100).toFixed(0)}%
-                    </span>
+                    <span className="font-mono text-[10px] font-bold text-[#18A0FB]">{((activeComp.compIntensity ?? intensity) * 100).toFixed(0)}%</span>
                   </div>
                   <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="2.0"
-                      step="0.05"
+                    <input type="range" min="0.1" max="2.0" step="0.05"
                       value={activeComp.compIntensity ?? intensity}
                       onChange={(e) => updateActiveComponentField('compIntensity', Number(e.target.value))}
-                      className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]"
-                    />
+                      className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]" />
                   </div>
                   <div className="flex justify-between text-[8px] text-neutral-600 font-mono px-0.5">
                     <span>Subtle</span>
-                    <span className="text-neutral-500">{['card','dialog','sheets'].includes(activeComp.type) ? 'Large scale ↔' : 'Small scale ↔'}</span>
+                    <span className="text-neutral-500">{['card','dialog','sheets'].includes(activeComp.type) ? 'Large scale' : 'Small scale'}</span>
                     <span>Max</span>
                   </div>
                 </div>
 
-                        <div className="space-y-2">
-                          {/* 2a. Initials Entry (Only when initials is selected) */}
-                          {(activeComp.avatarType === 'initials') && (
-                            <div className="space-y-1">
-                              <span className="text-[9px] text-neutral-450 font-sans block">Avatar Initials (Max 3 chars)</span>
-                              <input
-                                type="text"
-                                maxLength={3}
-                                value={activeComp.avatarInitials !== undefined ? activeComp.avatarInitials : ''}
-                                placeholder={activeComp.title ? activeComp.title.slice(0, 2).toUpperCase() : 'AV'}
-                                onChange={(e) => {
-                                  updateActiveComponentField('avatarInitials', e.target.value.toUpperCase());
-                                }}
-                                className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9.5px] font-mono text-neutral-100 placeholder-neutral-600 focus:border-[#18A0FB] outline-none"
-                              />
-                            </div>
-                          )}
+                {/* VARIANT / TYPE */}
+                <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Type</span>
+                  <div className="relative">
+                    <select
+                      value={activeComp.variant || ''}
+                      onChange={(e) => {
+                      updateActiveComponentField('variant', e.target.value);
+                      // For avatar, sync avatarType with variant
+                      if (activeComp.type === 'avatar') {
+                        updateActiveComponentField('avatarType', e.target.value as any);
+                      }
+                    }}
+                      className="w-full bg-[#1E1E1E] text-neutral-200 border border-neutral-700/30 rounded px-2.5 py-1.5 text-xs focus:border-[#18A0FB] focus:outline-none appearance-none cursor-pointer font-sans h-8"
+                    >
+                      {activeComp.type === 'button' && (<>
+                        <option value="filled">Filled</option>
+                        <option value="tonal">Tonal</option>
+                        <option value="elevated">Elevated</option>
+                        <option value="outlined">Outlined</option>
+                        <option value="text">Text</option>
+                      </>)}
+                      {activeComp.type === 'chip' && (<>
+                        <option value="assist">Assist</option>
+                        <option value="filter">Filter</option>
+                        <option value="input">Input</option>
+                        <option value="suggestion">Suggestion</option>
+                        <option value="elevated">Elevated</option>
+                        <option value="filled">Filled</option>
+                      </>)}
+                      {activeComp.type === 'fab' && (<>
+                        <option value="primary">Primary FAB</option>
+                        <option value="secondary">Secondary FAB</option>
+                        <option value="surface">Surface FAB</option>
+                        <option value="tertiary">Tertiary FAB</option>
+                        <option value="extended">Extended FAB (with label)</option>
+                      </>)}
+                      {activeComp.type === 'card' && (<>
+                        <option value="elevated">Elevated</option>
+                        <option value="filled">Filled</option>
+                        <option value="outlined">Outlined</option>
+                      </>)}
+                      {activeComp.type === 'dialog' && (<>
+                        <option value="standard">Standard Dialog</option>
+                        <option value="icon">Icon Dialog</option>
+                        <option value="scrollable">Scrollable Dialog</option>
+                        <option value="alert">Alert Dialog</option>
+                      </>)}
+                      {activeComp.type === 'badge' && (<>
+                        <option value="standard">Standard Pill</option>
+                        <option value="dot">Dot</option>
+                      </>)}
+                      {activeComp.type === 'sheets' && (<>
+                        <option value="side">Side Sheet</option>
+                        <option value="bottom">Bottom Sheet</option>
+                      </>)}
+                      {activeComp.type === 'avatar' && (<>
+                        <option value="icon">Icon</option>
+                        <option value="initials">Initials</option>
+                        <option value="image">Image</option>
+                      </>)}
+                      {activeComp.type === 'progress' && (<>
+                        <option value="linear">Linear</option>
+                        <option value="circular">Circular</option>
+                      </>)}
+                      {activeComp.type === 'card' && (<>
+                        <option value="vertical">Vertical</option>
+                        <option value="horizontal">Horizontal</option>
+                      </>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center px-1.5 text-neutral-400">
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
 
-                          {/* 2b. Static Image File Upload (Only when image is selected) */}
-                          {((activeComp.avatarType || (activeComp.iconImage ? 'image' : 'icon')) === 'image') && (
-                            <div className="space-y-1">
-                              <span className="text-[9px] text-neutral-450 font-sans block">Static Avatar Target Image</span>
-                              <div className="flex gap-1.5">
-                                <label 
-                                  htmlFor="card-avatar-image-upload" 
-                                  className="flex-1 py-1.5 px-2 bg-[#2C2C2C] hover:bg-[#333333] selection:bg-transparent text-neutral-300 rounded text-[9px] font-bold uppercase cursor-pointer text-center truncate border border-neutral-700/50 transition-colors"
-                                >
-                                  {activeComp.iconImage ? 'Replace Image' : 'Upload Image'}
-                                </label>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  id="card-avatar-image-upload"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (event) => {
-                                        const base64 = event.target?.result as string;
-                                        updateActiveComponentField('iconImage', base64);
-                                        updateActiveComponentField('avatarType', 'image');
-                                        showToast("Avatar custom static image attached!");
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }}
-                                />
-                                {activeComp.iconImage && (
-                                  <button
-                                    onClick={() => {
-                                      updateActiveComponentField('iconImage', undefined);
-                                      updateActiveComponentField('avatarType', 'icon');
-                                      showToast("Removed custom image avatar. Reverted to Icon.");
-                                    }}
-                                    className="py-1.5 px-2.5 bg-red-950/25 hover:bg-red-900/30 text-red-400 rounded text-[9px] font-bold uppercase cursor-pointer border-none transition-all"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 2c. Custom Frame Background Color */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] text-neutral-400 font-sans">Avatar Frame Background</span>
-                            <div className="flex items-center gap-1.5 bg-[#1E1E1E] p-1 rounded font-sans leading-none border border-neutral-800">
-                              <input 
-                                type="color" 
-                                value={activeComp.iconBgColor || '#222222'} 
-                                onChange={(e) => {
-                                  updateActiveComponentField('iconBgColor', e.target.value);
-                                }} 
-                                className="w-4 h-4 border-none p-0 bg-transparent cursor-pointer rounded-sm" 
-                              />
-                              <span className="text-[8.5px] font-mono text-neutral-300 uppercase">{activeComp.iconBgColor || 'Default'}</span>
-                            </div>
+                  {/* Avatar type-specific fields */}
+                  {activeComp.type === 'avatar' && (
+                    <div className="space-y-2 mt-2">
+                      {(activeComp.variant === 'icon' || !activeComp.variant) && (
+                        <div className="text-[9px] text-neutral-500 font-sans">Icon controlled via the icon picker above</div>
+                      )}
+                      {activeComp.variant === 'initials' && (
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-neutral-450 font-sans block">Initials (max 3)</span>
+                          <input type="text" maxLength={3}
+                            value={activeComp.avatarInitials !== undefined ? activeComp.avatarInitials : ''}
+                            placeholder={activeComp.title ? activeComp.title.slice(0, 2).toUpperCase() : 'AV'}
+                            onChange={(e) => updateActiveComponentField('avatarInitials', e.target.value.toUpperCase())}
+                            className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9.5px] font-mono text-neutral-100 placeholder-neutral-600 focus:border-[#18A0FB] outline-none" />
+                        </div>
+                      )}
+                      {activeComp.variant === 'image' && (
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-neutral-450 font-sans block">Avatar Image</span>
+                          <div className="flex gap-1.5">
+                            <label htmlFor="avatar-image-upload" className="flex-1 py-1.5 px-2 bg-[#2C2C2C] hover:bg-[#333] text-neutral-300 rounded text-[9px] font-bold uppercase cursor-pointer text-center border border-neutral-700/50 transition-colors">
+                              {activeComp.iconImage ? 'Replace' : 'Upload'}
+                            </label>
+                            <input type="file" accept="image/*" id="avatar-image-upload" className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (ev) => {
+                                    updateActiveComponentField('iconImage', ev.target?.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }} />
+                            {activeComp.iconImage && (
+                              <button onClick={() => updateActiveComponentField('iconImage', undefined)}
+                                className="py-1.5 px-2 bg-red-950/25 hover:bg-red-900/30 text-red-400 rounded text-[9px] font-bold uppercase cursor-pointer border-none">
+                                Reset
+                              </button>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* SIZE PRESET */}
+                <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Size</span>
+                  <div className="grid grid-cols-5 gap-1">
+                    {(['xsmall','small','medium','large','xlarge'] as const).map(s => (
+                      <button key={s}
+                        onClick={() => {
+                          const presets = M3_SIZE_PRESETS[activeComp.type as keyof typeof M3_SIZE_PRESETS];
+                          if (presets?.[s]) {
+                            const { width, height, borderRadius } = presets[s];
+                            updateActiveComponentField('sizePreset', s);
+                            updateActiveComponentField('width', width);
+                            updateActiveComponentField('height', height);
+                            updateActiveComponentField('borderRadius', borderRadius);
+                          }
+                        }}
+                        className={`py-1 text-[8px] font-bold rounded cursor-pointer uppercase transition-all ${
+                          activeComp.sizePreset === s ? 'bg-[#18A0FB]/15 text-[#18A0FB]' : 'text-neutral-400 hover:text-neutral-200 bg-[#1E1E1E]'
+                        }`}>
+                        {s[0].toUpperCase()}
+                      </button>
+                    ))}
                   </div>
                 </div>
+
+                {/* DIMENSIONS */}
+                <div className="space-y-2 pb-3 border-b border-[#333]">
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Dimensions</span>
+                  {(['width','height','borderRadius'] as const).map(field => (
+                    <div key={field} className="space-y-1">
+                      <div className="flex justify-between items-center text-[9px] font-sans text-neutral-450">
+                        <span className="uppercase font-bold tracking-wider">{field === 'borderRadius' ? 'Radius' : field === 'width' ? 'W' : 'H'}</span>
+                        <span className="font-mono font-bold text-[#18A0FB]">{(activeComp as any)[field]}px</span>
+                      </div>
+                      <div className="h-8 bg-[#1E1E1E] px-2.5 rounded-md flex items-center border border-neutral-800/80">
+                        <input type="range"
+                          min={field === 'borderRadius' ? 0 : field === 'height' ? 20 : 40}
+                          max={field === 'borderRadius' ? 100 : 800}
+                          step={field === 'borderRadius' ? 1 : 4}
+                          value={(activeComp as any)[field]}
+                          onChange={(e) => updateActiveComponentField(field, Number(e.target.value))}
+                          className="w-full h-1 bg-neutral-800 rounded cursor-pointer accent-[#18A0FB]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* SHOW / HIDE TOGGLES */}
+                <div className="space-y-2 pb-3 border-b border-[#333]">
+                  <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Show</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([ ['configShowIcon','Icon'], ['configShowTitle','Title'], ['configShowSubtitle','Subtitle'], ['configShowDescription','Body'], ['configShowActions','Actions'] ] as const).map(([field, label]) => (
+                      <button key={field}
+                        onClick={() => updateActiveComponentField(field, !(activeComp as any)[field])}
+                        className={`py-1 px-2 text-[8.5px] font-bold rounded uppercase transition-all flex items-center gap-1 justify-center ${
+                          (activeComp as any)[field] ? 'bg-[#18A0FB]/15 text-[#18A0FB]' : 'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-300'
+                        }`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ICON BG COLOR (for card/dialog avatar) */}
+                {(activeComp.configShowIcon && ['card','dialog'].includes(activeComp.type)) && (
+                  <div className="flex items-center justify-between pb-3 border-b border-[#333]">
+                    <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">Icon Color</span>
+                    <div className="flex items-center gap-1.5 bg-[#1E1E1E] px-2 py-1 rounded border border-neutral-800">
+                      <input type="color"
+                        value={activeComp.iconBgColor || '#222222'}
+                        onChange={(e) => updateActiveComponentField('iconBgColor', e.target.value)}
+                        className="w-4 h-4 border-none p-0 bg-transparent cursor-pointer rounded" />
+                      <span className="text-[8.5px] font-mono text-neutral-400">{activeComp.iconBgColor || '#222222'}</span>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
+
 
 
           </div>
