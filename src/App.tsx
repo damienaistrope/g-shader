@@ -195,6 +195,7 @@ interface ComponentInstance {
   avatarType?: 'icon' | 'initials' | 'image';
   avatarInitials?: string;
   compIntensity?: number;  // per-component intensity override (0.1 - 2.0)
+  layout?: 'vertical' | 'horizontal';
 }
 
 const M3_COLOR_LIBRARIES: Record<string, {
@@ -4960,7 +4961,7 @@ figma.ui.onmessage = (msg) => {
                     ))}
                   </div>
                 </div>
-                )}}
+                )}
 
                 {/* DIMENSIONS */}
                 <div className="space-y-2 pb-3 border-b border-[#333]">
@@ -5086,7 +5087,7 @@ figma.ui.onmessage = (msg) => {
                     <div className="flex gap-1 mt-1">
                       {(['vertical','horizontal'] as const).map(layout => (
                         <button key={layout}
-                          onClick={() => updateActiveComponentField('layout', layout)}
+                          onClick={() => updateActiveComponentField('layout' as any, layout)}
                           className={`flex-1 py-1 text-[8.5px] font-bold uppercase rounded cursor-pointer transition-all ${(activeComp.layout||'vertical')===layout?'bg-[#18A0FB]/15 text-[#18A0FB]':'text-neutral-500 bg-[#1E1E1E] hover:text-neutral-300'}`}>
                           {layout}
                         </button>
