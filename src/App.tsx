@@ -3622,11 +3622,11 @@ figma.ui.onmessage = (msg) => {
                 }}
               >
                 <div 
-                  className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 ${canvasBgMode === 'light' ? 'bg-neutral-200/60' : 'bg-white/20'}`}
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-1"
                 >
                   <span 
                     className={`material-symbols-outlined text-[20px] select-none ${
-                      canvasBgMode === 'light' ? 'text-neutral-500' : 'text-white/60'
+                      canvasBgMode === 'light' ? 'text-neutral-700' : 'text-neutral-800'
                     }`}
                   >
                     space_dashboard
@@ -3634,14 +3634,14 @@ figma.ui.onmessage = (msg) => {
                 </div>
                 <span 
                   className={`text-[11.5px] select-none block font-bold uppercase tracking-wider ${
-                    canvasBgMode === 'light' ? 'text-neutral-700' : 'text-neutral-300'
+                    'text-neutral-800'
                   }`}
                 >
                   Canvas is empty
                 </span>
                 <span 
                   className={`text-[9.5px] select-none leading-relaxed mt-0.5 ${
-                    canvasBgMode === 'light' ? 'text-neutral-500' : 'text-neutral-500'
+                    'text-neutral-600'
                   }`}
                 >
                   Click on any specimen from the specimen kit sidebar to add it.
@@ -4354,7 +4354,7 @@ figma.ui.onmessage = (msg) => {
                         <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px',
                           ...(compState !== 0 ? {
                             '--md-sys-color-primary': compMidColor,
-                            '--md-sys-color-surface-container-highest': compBgColor + '40',
+                            // Track stays neutral — only the indicator gets energy color
                           } as React.CSSProperties : {})
                         }}>
                           {comp.variant === 'circular' ? (
@@ -4374,8 +4374,8 @@ figma.ui.onmessage = (msg) => {
                     </div>
                   </div>
 
-                  {/* HIGH-ACCURACY DESIGNER RESIZE HANDLE ANCHORS */}
-                  {isSelected && (
+                  {/* RESIZE HANDLES — primary selected OR in multi-select group */}
+                  {(isSelected || selectedIds.has(comp.id)) && (
                     <>
                       {/* Eastern resize edge */}
                       <div 
@@ -5091,7 +5091,7 @@ figma.ui.onmessage = (msg) => {
                 )}
 
                 {/* ICON PICKER */}
-                {(activeComp.configShowIcon || ['fab','avatar'].includes(activeComp.type)) && (
+                {(activeComp.configShowIcon || (activeComp.type === 'fab') || (activeComp.type === 'avatar' && (activeComp.variant === 'icon' || !activeComp.variant))) && (
                   <div className="space-y-1.5 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Icon</span>
                     <div className="space-y-1.5">
@@ -5254,7 +5254,7 @@ figma.ui.onmessage = (msg) => {
                 )}
 
                 {/* ICON / AVATAR BG COLOR */}
-                {(activeComp.configShowIcon || activeComp.type === 'avatar') && (
+                {(activeComp.configShowIcon || (activeComp.type === 'avatar' && activeComp.variant !== 'image')) && (
                   <div className="flex items-center justify-between pb-3 border-b border-[#333]">
                     <span className="text-[9px] text-neutral-400 font-sans uppercase font-bold tracking-wider">{activeComp.type === 'avatar' ? 'Avatar BG' : 'Icon Color'}</span>
                     <div className="flex items-center gap-1.5 bg-[#1E1E1E] px-2 py-1 rounded border border-neutral-800">
