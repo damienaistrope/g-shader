@@ -163,7 +163,7 @@ const interpolateHexColors = (colorA: string, colorB: string, fraction: number):
 interface ComponentInstance {
   id: string;
   name: string;
-  type: 'card' | 'button' | 'chip' | 'fab' | 'dialog' | 'badge' | 'sheets' | 'avatar' | 'progress';
+  type: 'card' | 'button' | 'chip' | 'fab' | 'dialog' | 'badge' | 'sheets' | 'avatar' | 'progress' | 'image';
   width: number;
   height: number;
   borderRadius: number;
@@ -347,13 +347,8 @@ const M3_SIZE_PRESETS = {
     large: { width: 220, height: 56, borderRadius: 28 },
     xlarge: { width: 260, height: 64, borderRadius: 32 }
   },
-  chip: {
-    xsmall: { width: 80, height: 24, borderRadius: 6 },
-    small: { width: 100, height: 28, borderRadius: 8 },
-    medium: { width: 120, height: 32, borderRadius: 8 },
-    large: { width: 140, height: 36, borderRadius: 8 },
-    xlarge: { width: 160, height: 44, borderRadius: 10 }
-  },
+  // Chips: fixed 32px height per M3 spec — no size variants
+  chip: { medium: { width: 120, height: 32, borderRadius: 8 } },
   fab: {
     xsmall: { width: 32, height: 32, borderRadius: 10 },
     small: { width: 40, height: 40, borderRadius: 12 },
@@ -388,6 +383,13 @@ const M3_SIZE_PRESETS = {
     medium: { width: 280, height: 48, borderRadius: 4 },
     large:  { width: 340, height: 48, borderRadius: 4 },
     xlarge: { width: 400, height: 56, borderRadius: 4 }
+  },
+  image: {
+    xsmall: { width: 120, height: 80, borderRadius: 8 },
+    small:  { width: 200, height: 140, borderRadius: 12 },
+    medium: { width: 300, height: 200, borderRadius: 16 },
+    large:  { width: 400, height: 280, borderRadius: 20 },
+    xlarge: { width: 560, height: 380, borderRadius: 24 }
   },
   card: {
     xsmall: { width: 180, height: 100, borderRadius: 8 },
@@ -1365,6 +1367,7 @@ figma.ui.onmessage = (msg) => {
   const activeMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordIntervalRef = useRef<any>(null);
   const stopRecordingCallbackRef = useRef<(() => void) | null>(null);
+  const liveResizeRef = useRef<{ id: string; width: number; height: number } | null>(null);
 
   useEffect(() => {
     isRecordingPausedRef.current = isRecordingPaused;
@@ -1583,26 +1586,20 @@ figma.ui.onmessage = (msg) => {
             return c;
           }));
         } else if (isResizing && resizingComponentId) {
-          setCanvasComponents(prev => prev.map(c => {
-            if (c.id === resizingComponentId) {
-              const updated: Partial<ComponentInstance> = {};
-              if (isResizing.includes('e')) {
-                const minW = ['card','dialog','sheets'].includes(c.type) ? 180 : ['button','chip'].includes(c.type) ? 72 : 48;
-                updated.width = Math.max(minW, Math.min(900, startWidth + deltaX));
-                updated.sizeMode = 'fixed';
-              }
-              if (isResizing.includes('s')) {
-                const minH = ['card','dialog','sheets'].includes(c.type) ? 120 : ['button'].includes(c.type) ? 36 : 28;
-                updated.height = Math.max(minH, Math.min(800, startHeight + deltaY));
-                updated.heightMode = 'fixed';
-              }
-              return {
-                ...c,
-                ...updated
-              };
+          // Apply resize directly to DOM to avoid re-render flicker
+          const comp = canvasComponents.find(c => c.id === resizingComponentId);
+          if (comp) {
+            const minW = ['card','dialog','sheets','image'].includes(comp.type) ? 180 : ['button','chip'].includes(comp.type) ? 72 : 48;
+            const minH = ['card','dialog','sheets','image'].includes(comp.type) ? 120 : ['button'].includes(comp.type) ? 36 : 28;
+            const newW = isResizing.includes('e') ? Math.max(minW, Math.min(900, startWidth + deltaX)) : comp.width;
+            const newH = isResizing.includes('s') ? Math.max(minH, Math.min(800, startHeight + deltaY)) : comp.height;
+            liveResizeRef.current = { id: resizingComponentId, width: newW, height: newH };
+            const el = document.getElementById(`specimen-wrapper-${resizingComponentId}`);
+            if (el) {
+              if (isResizing.includes('e')) el.style.width = `${newW}px`;
+              if (isResizing.includes('s')) el.style.height = `${newH}px`;
             }
-            return c;
-          }));
+          }
         }
       }
 
@@ -1671,6 +1668,12 @@ figma.ui.onmessage = (msg) => {
 
     const handleGlobalMouseUp = () => {
       setIsDragging(false);
+      // Commit live DOM resize to state
+      if (liveResizeRef.current) {
+        const { id, width, height } = liveResizeRef.current;
+        setCanvasComponents(prev => prev.map(c => c.id === id ? { ...c, width, height, sizeMode: 'fixed', heightMode: 'fixed' } : c));
+        liveResizeRef.current = null;
+      }
       setIsResizing(null);
       setDraggingComponentId(null);
       setResizingComponentId(null);
@@ -2511,135 +2514,146 @@ figma.ui.onmessage = (msg) => {
     const finalType = activeComp ? activeComp.type : 'canvas';
 
     // Perform drawing routine on composite canvas
-    const renderCompFrame = () => {
+    // ── HTML2CANVAS CAPTURE APPROACH ──
+    // Loads html2canvas from CDN on first use, then captures the actual DOM component
+    const getHtml2Canvas = async (): Promise<any> => {
+      if ((window as any)._h2c) return (window as any)._h2c;
+      return new Promise((resolve) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload = () => { (window as any)._h2c = (window as any).html2canvas; resolve((window as any).html2canvas); };
+        document.head.appendChild(s);
+      });
+    };
+
+    const renderCompFrame = async () => {
       ctx.clearRect(0, 0, finalW, finalH);
-      
-      // Paint standard figma theme backdrops or backdropSolidColor if active
+
+      // 1. Background fill
       let bgFill = canvasBgMode === 'dark' ? '#1E1E1E' : '#EAEAEA';
-      if (isBackdropVisible && activeBackdrop === 'solid') {
-        bgFill = backdropSolidColor;
-      }
+      if (isBackdropVisible && activeBackdrop === 'solid') bgFill = backdropSolidColor;
       ctx.fillStyle = bgFill;
       ctx.fillRect(0, 0, finalW, finalH);
 
-      // Draw uploaded or live backdrop image if active
-      if (isBackdropVisible && (activeBackdrop === 'uploaded' || activeBackdrop === 'live')) {
+      // 2. Backdrop image/iframe
+      if (isBackdropVisible && (activeBackdrop === 'uploaded' || activeBackdrop === 'live' || activeBackdrop === 'figma')) {
         const imgEl = document.querySelector('.backdrop-image-source') as HTMLImageElement;
         if (imgEl && imgEl.complete) {
           ctx.save();
           ctx.globalAlpha = backdropOpacity;
-          const scale = backdropScale;
-          const dw = finalW * scale;
-          const dh = finalH * scale;
-          const dx = (finalW - dw) / 2;
-          const dy = (finalH - dh) / 2;
-          ctx.drawImage(imgEl, dx, dy, dw, dh);
+          ctx.drawImage(imgEl, 0, 0, finalW, finalH);
           ctx.restore();
         }
       }
 
       ctx.save();
-      // Apply resolution upscaling
       ctx.scale(recordResolutionMultiplier, recordResolutionMultiplier);
 
-      if (activeComp && canvas) {
+      if (activeComp) {
         const canvasEl = document.getElementById('figma-editor-canvas');
         const sRect = canvasEl?.getBoundingClientRect();
-        const centerX = sRect ? sRect.width / 2 : 600;
-        const centerY = sRect ? sRect.height / 2 : 400;
-        const compLeft = centerX + activeComp.x - activeComp.width / 2;
-        const compTop = centerY + activeComp.y - activeComp.height / 2;
+        if (!sRect) { ctx.restore(); return; }
 
-        const relativeClicks = recordedClicks.map(cl => ({
-          ...cl,
-          x: cl.x - compLeft,
-          y: cl.y - compTop
-        }));
+        const compLeft = sRect.width / 2 + activeComp.x - activeComp.width / 2;
+        const compTop = sRect.height / 2 + activeComp.y - activeComp.height / 2;
+        const drawX = compLeft - cropX;
+        const drawY = compTop - cropY;
+        const drawW = activeComp.width;
+        const drawH = activeComp.height;
+        const br = Math.min(activeComp.borderRadius, drawW / 2, drawH / 2);
 
-        drawSpecimenToCanvas(
-          ctx,
-          activeComp,
-          canvasBgMode,
-          canvas,
-          cropX,
-          cropY,
-          relativeClicks,
-          recMousePos,
-          recordShowCursor,
-          recordShowClicks
-        );
-      } else {
-        // Draw the full canvas with any visible components
-        const viewportW = 1200;
-        const viewportH = 800;
-        const centerX = viewportW / 2;
-        const centerY = viewportH / 2;
+        // Clip to component rounded rect
+        ctx.save();
+        if (br > 0) {
+          ctx.beginPath();
+          ctx.moveTo(drawX + br, drawY);
+          ctx.lineTo(drawX + drawW - br, drawY);
+          ctx.quadraticCurveTo(drawX + drawW, drawY, drawX + drawW, drawY + br);
+          ctx.lineTo(drawX + drawW, drawY + drawH - br);
+          ctx.quadraticCurveTo(drawX + drawW, drawY + drawH, drawX + drawW - br, drawY + drawH);
+          ctx.lineTo(drawX + br, drawY + drawH);
+          ctx.quadraticCurveTo(drawX, drawY + drawH, drawX, drawY + drawH - br);
+          ctx.lineTo(drawX, drawY + br);
+          ctx.quadraticCurveTo(drawX, drawY, drawX + br, drawY);
+          ctx.closePath();
+          ctx.clip();
+        }
 
-        canvasComponents.forEach((c) => {
-          const cCanvas = document.getElementById(`canvas-for-${c.id}`) as HTMLCanvasElement ||
-                          document.getElementById(`canvas-for-${c.type}`) as HTMLCanvasElement;
-          if (cCanvas) {
-            const compLeft = centerX + c.x - c.width / 2;
-            const compTop = centerY + c.y - c.height / 2;
-            
-            ctx.save();
-            ctx.translate(compLeft - cropX, compTop - cropY);
-            
-            // Draw this component's webgl background
-            // ctx.drawImage(cCanvas, 0, 0); // Removed to allow drawSpecimenToCanvas to draw WebGL background with rounded masking
+        // Draw WebGL shader background (energy)
+        if (canvas) {
+          ctx.drawImage(canvas, drawX - cropX, drawY - cropY, drawW, drawH);
+        }
 
-            // Translate and draw specimen controls/text
-            drawSpecimenToCanvas(
-              ctx,
-              c,
-              canvasBgMode,
-              cCanvas,
-              0,
-              0,
-              [],
-              { x: -100, y: -100 },
-              false,
-              false
-            );
-
-            ctx.restore();
+        // Capture actual DOM component
+        try {
+          const h2c = await getHtml2Canvas();
+          const wrapperEl = document.getElementById(`specimen-wrapper-${activeComp.id}`);
+          if (wrapperEl && h2c) {
+            const captured = await h2c(wrapperEl, {
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: null,
+              scale: recordResolutionMultiplier,
+              logging: false,
+              width: drawW,
+              height: drawH,
+            });
+            ctx.drawImage(captured, drawX, drawY, drawW, drawH);
           }
-        });
+        } catch (_) {
+          // Fallback: draw bg color
+          ctx.fillStyle = canvasBgMode === 'dark' ? '#1E1E1E' : '#F4F4F4';
+          ctx.fillRect(drawX, drawY, drawW, drawH);
+        }
 
-        // Draw clicks in full canvas coordinates
-        if (recordShowClicks && recordedClicks.length > 0) {
-          recordedClicks.forEach((click) => {
-            const clickAge = Date.now() - click.timestamp;
-            if (clickAge < 1200) {
-              const ratio = clickAge / 1200;
+        ctx.restore();
+
+        // Draw click ripples on top
+        if (recordShowClicks) {
+          const now = Date.now();
+          recordedClicks.forEach(click => {
+            const elapsed = now - click.timestamp;
+            if (elapsed < 1200) {
+              const ratio = elapsed / 1200;
+              const radius = ratio * 28 + 4;
               const alpha = Math.max(0, 1 - ratio);
-              const radius = 22 * ratio + 4;
-              
+              const cx = drawX + (click.x - compLeft - cropX);
+              const cy = drawY + (click.y - compTop - cropY);
               ctx.save();
-              // Outer ripple ring
-              ctx.strokeStyle = `rgba(24, 160, 251, ${alpha * 0.4})`;
-              ctx.lineWidth = 1.5;
+              ctx.globalAlpha = alpha * 0.5;
               ctx.beginPath();
-              ctx.arc(click.x - cropX, click.y - cropY, radius, 0, Math.PI * 2);
+              ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+              ctx.strokeStyle = '#18A0FB';
+              ctx.lineWidth = 2;
               ctx.stroke();
-
-              // Soft inner filled background
-              ctx.fillStyle = `rgba(24, 160, 251, ${alpha * 0.08})`;
+              ctx.globalAlpha = alpha * 0.9;
               ctx.beginPath();
-              ctx.arc(click.x - cropX, click.y - cropY, radius, 0, Math.PI * 2);
+              ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+              ctx.fillStyle = 'white';
               ctx.fill();
-
-              // Elegant solid inner dot that also fades nicely
-              ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.95})`;
-              ctx.strokeStyle = `rgba(24, 160, 251, ${alpha * 0.8})`;
+              ctx.strokeStyle = 'rgba(24,160,251,0.8)';
               ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.arc(click.x - cropX, click.y - cropY, 4 * (1 - ratio * 0.3), 0, Math.PI * 2);
-              ctx.fill();
               ctx.stroke();
               ctx.restore();
             }
           });
+        }
+        // Draw cursor
+        if (recordShowCursor && recMousePos.x >= 0) {
+          const mx = recMousePos.x - compLeft - cropX;
+          const my = recMousePos.y - compTop - cropY;
+          ctx.save();
+          // Cursor shadow
+          ctx.shadowColor = 'rgba(0,0,0,0.3)';
+          ctx.shadowBlur = 4;
+          ctx.beginPath();
+          ctx.arc(drawX + mx, drawY + my, 6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.restore();
         }
       }
 
@@ -2649,7 +2663,7 @@ figma.ui.onmessage = (msg) => {
     if (exportFormat === 'png') {
       try {
         setExportStatus('Rendering custom frame...');
-        renderCompFrame();
+        await renderCompFrame();
 
         const dataUrl = compositeCanvas.toDataURL('image/png');
         const link = document.createElement('a');
@@ -2678,7 +2692,7 @@ figma.ui.onmessage = (msg) => {
         }, 100);
 
         // Render first frame
-        renderCompFrame();
+        await renderCompFrame();
 
         const canvasStream = (compositeCanvas as any).captureStream
           ? (compositeCanvas as any).captureStream(recordFPS)
@@ -2749,11 +2763,11 @@ figma.ui.onmessage = (msg) => {
         let elapsedFrames = 0;
 
         if (recordIntervalRef.current) clearInterval(recordIntervalRef.current);
-        recordIntervalRef.current = setInterval(() => {
+        recordIntervalRef.current = setInterval(async () => {
           if (isRecordingPausedRef.current) {
             return; // skip ticks if paused
           }
-          renderCompFrame();
+          await renderCompFrame();
           elapsedFrames++;
           
           setRecordingCount(elapsedFrames / recordFPS);
@@ -2832,11 +2846,11 @@ figma.ui.onmessage = (msg) => {
         stopRecordingCallbackRef.current = handleStopExportGif;
 
         if (recordIntervalRef.current) clearInterval(recordIntervalRef.current);
-        recordIntervalRef.current = setInterval(() => {
+        recordIntervalRef.current = setInterval(async () => {
           if (isRecordingPausedRef.current) {
             return; // skip ticks if paused
           }
-          renderCompFrame();
+          await renderCompFrame();
 
           const dataUrl = compositeCanvas.toDataURL('image/png');
           snapshots.push(dataUrl);
@@ -3333,7 +3347,7 @@ figma.ui.onmessage = (msg) => {
                               title={swatch.label}
                             >
                               {backdropSolidColor.toLowerCase() === swatch.hex.toLowerCase() && (
-                                <span className="absolute inset-0 flex items-center justify-center text-[7px] text-white mix-blend-difference font-bold">✓</span>
+                                <span className="absolute inset-0 flex items-center justify-center text-[8px] text-white font-bold drop-shadow-[0_0_1px_rgba(0,0,0,0.8)]">✓</span>
                               )}
                             </button>
                           ));
@@ -3458,7 +3472,7 @@ figma.ui.onmessage = (msg) => {
 
          {/* CENTER CAMERA VIEWPORT: FIGMA EDITOR CANVAS */}
         <main 
-          className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 overflow-hidden ${
+          className={`flex-1 flex flex-col items-center justify-center relative p-8 transition-colors duration-300 ${
             canvasBgMode === 'dark' ? 'bg-[#1E1E1E]' : 'bg-[#F4F4F6]'
           }`} 
           id="figma-editor-canvas"
@@ -3568,25 +3582,21 @@ figma.ui.onmessage = (msg) => {
                 />
               )}
 
-              {/* Live Webpage / Prototype Frame Backdrop */}
-              {activeBackdrop === 'live' && liveFrameUrl && (
-                <div 
+              {/* Live / Figma Frame Backdrop */}
+              {(activeBackdrop === 'live' || activeBackdrop === 'figma') && liveFrameUrl && (
+                <div
                   className="absolute inset-0 z-0 overflow-hidden bg-white"
-                  style={{
-                    opacity: backdropOpacity,
-                  }}
+                  style={{ opacity: backdropOpacity }}
                 >
-                  {/* Render Live Frame inside isolated sandbox space, filling full viewport area */}
-                  <iframe 
-                    src={liveFrameUrl} 
-                    title="Live Frame Preview" 
+                  <iframe
+                    src={liveFrameUrl}
+                    title={activeBackdrop === 'figma' ? 'Figma Frame' : 'Live Preview'}
                     scrolling="no"
-                    style={{ overflow: 'hidden' }}
-                    className="w-full h-full border-none bg-white select-none pointer-events-none"
+                    allow="fullscreen"
+                    style={{ overflow: 'hidden', border: 'none', width: '100%', height: '100%', pointerEvents: 'none', userSelect: 'none' }}
                   />
                 </div>
               )}
-
             </div>
           )}
 
@@ -3612,11 +3622,11 @@ figma.ui.onmessage = (msg) => {
                 }}
               >
                 <div 
-                  className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 ${canvasBgMode === 'light' ? 'bg-neutral-200/50' : 'bg-neutral-800/50'}`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 ${canvasBgMode === 'light' ? 'bg-neutral-200/60' : 'bg-white/20'}`}
                 >
                   <span 
                     className={`material-symbols-outlined text-[20px] select-none ${
-                      canvasBgMode === 'light' ? 'text-neutral-500' : 'text-neutral-600'
+                      canvasBgMode === 'light' ? 'text-neutral-500' : 'text-white/60'
                     }`}
                   >
                     space_dashboard
@@ -3697,11 +3707,13 @@ figma.ui.onmessage = (msg) => {
 
                   // Define whether active state has blurred/bloomed boundaries defined by the M3 fluid / energy API
                   // "I believe when the variant is named outline, no blurring takes place outside of the component container"
-                  const isStateBlurred = (compState === 2 || compState === 3 || compState === 4 || compState === 5) &&
+                  // Anticipating (5) = contained energy — no edge blur
+                  const isStateBlurred = (compState === 2 || compState === 3 || compState === 4) &&
                                          comp.variant !== 'outlined' &&
                                          comp.variant !== 'outline' &&
                                          comp.variant !== 'text' &&
                                          comp.variant !== 'assist';
+                  const isAnticipating = compState === 5;
 
                   // Boundary warping/deforming only happens in states 2, 3, and 4 (excluding 5)
                   const isBoundaryWarped = (compState === 2 || compState === 3 || compState === 4) &&
@@ -3836,10 +3848,14 @@ figma.ui.onmessage = (msg) => {
                         filter: (isBoundaryWarped && isAnimationActive) ? 'url(#m3-energy-warp-filter)' : 'none',
                         boxShadow: isElementSpecimen
                           ? 'none'
-                          : isStateBlurred && isAnimationActive
-                          ? `0 0 ${intensity * 12 + 6}px ${statusGlowColor}, inset 0 0 ${intensity * 6 + 2}px ${statusGlowColor}`
+                          : (isStateBlurred || isAnticipating) && isAnimationActive
+                          ? isAnticipating
+                            ? `inset 0 0 ${effectiveIntensity * 18}px ${statusGlowColor}80, 0 0 ${effectiveIntensity * 2}px ${statusGlowColor}20`
+                            : `0 0 ${intensity * 12 + 6}px ${statusGlowColor}, inset 0 0 ${intensity * 6 + 2}px ${statusGlowColor}`
                           : compShadow,
                         border: isElementSpecimen
+                          ? 'none'
+                          : (compState !== 0 && isContainerSpecimen)
                           ? 'none'
                           : compBorderColor !== 'transparent'
                           ? `1.5px solid ${compBorderColor}`
@@ -4000,8 +4016,8 @@ figma.ui.onmessage = (msg) => {
                               )}
                               {comp.configShowActions && (
                                 <M3CardActions>
-                                  <M3Button variant={((comp as any).configSecondaryBtnVariant || 'outlined') as any} size="s" onClick={() => cycleComponentSize(comp.id)}>{(comp as any).configSecondaryBtnText || 'Secondary'}</M3Button>
-                                  <M3Button variant={((comp as any).configActionBtnVariant || 'filled') as any} size="s" onClick={() => cycleComponentSize(comp.id)}>{(comp as any).configActionBtnText || 'Action'}</M3Button>
+                                  <M3Button variant={((comp as any).configSecondaryBtnVariant || 'outlined') as any} size={((comp as any).configSecondaryBtnSize || 's') as any} onClick={() => cycleComponentSize(comp.id)}>{(comp as any).configSecondaryBtnText || 'Secondary'}</M3Button>
+                                  <M3Button variant={((comp as any).configActionBtnVariant || 'filled') as any} size={((comp as any).configActionBtnSize || 's') as any} onClick={() => cycleComponentSize(comp.id)}>{(comp as any).configActionBtnText || 'Action'}</M3Button>
                                 </M3CardActions>
                               )}
                             </>
@@ -4135,47 +4151,32 @@ figma.ui.onmessage = (msg) => {
                           ) : undefined}
                         >
                           {comp.variant === 'alert' ? (
-                            <p style={{ color: 'var(--md-sys-color-on-surface-variant)', fontSize: 'var(--md-sys-typescale-body-medium-size)', lineHeight: 'var(--md-sys-typescale-body-medium-line-height)', fontFamily: 'var(--md-sys-typescale-body-medium-font)' }}>
+                            <p style={{ fontFamily: 'var(--md-sys-typescale-body-medium-font)', fontSize: 'var(--md-sys-typescale-body-medium-size)', color: 'var(--md-sys-color-on-surface-variant)', lineHeight: 'var(--md-sys-typescale-body-medium-line-height)' }}>
                               {comp.text || 'This action cannot be undone. Are you sure you want to continue?'}
                             </p>
                           ) : comp.variant === 'scrollable' ? (
-                            /* Scrollable Account Selection List per Dialogue 3 spec */
-                            <div className="flex flex-col gap-1.5 py-2.5 max-h-[160px] overflow-y-auto w-full text-left" id="dialog-scrollable-accounts">
-                              <div className="flex items-center gap-4.5 px-1 py-1.5 rounded-lg hover:bg-neutral-800/10 dark:hover:bg-white/5 transition-colors cursor-pointer w-full">
-                                <div className="rounded-full w-[36px] h-[36px] flex items-center justify-center text-[13px] font-sans font-bold uppercase select-none mr-2.5 text-[#001C38] bg-[#D3E4FF] dark:bg-sky-900/40 dark:text-sky-100">
-                                  A
+                            <div className="flex flex-col py-2 max-h-[200px] overflow-y-auto w-full">
+                              {(['A','B','C'] as string[]).map((letter, idx) => (
+                                <div key={letter} className="flex items-center gap-4 px-4 py-3 cursor-pointer w-full">
+                                  <div className="rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0"
+                                    style={{ backgroundColor: 'var(--md-sys-color-primary-container)', color: 'var(--md-sys-color-on-primary-container)', fontSize: 14, fontWeight: 500, fontFamily: 'var(--md-sys-typescale-label-large-font)' }}>
+                                    {letter}
+                                  </div>
+                                  <span style={{ fontFamily: 'var(--md-sys-typescale-body-large-font)', fontSize: 'var(--md-sys-typescale-body-large-size)', color: 'var(--md-sys-color-on-surface)' }}>
+                                    List item {idx + 1}
+                                  </span>
                                 </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[13px] font-sans font-medium text-neutral-800 dark:text-neutral-200">List item 1</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4.5 px-1 py-1.5 rounded-lg hover:bg-neutral-800/10 dark:hover:bg-white/5 transition-colors cursor-pointer w-full">
-                                <div className="rounded-full w-[36px] h-[36px] flex items-center justify-center text-[13px] font-sans font-bold uppercase select-none mr-2.5 text-[#1D1B20] bg-[#E8DDFF] dark:bg-[#4F378B]/40 dark:text-[#E8DDFF]">
-                                  B
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[13px] font-sans font-medium text-neutral-800 dark:text-neutral-200">List item 2</span>
-                                </div>
-                              </div>
+                              ))}
                             </div>
-                          ) : (
-                            comp.configShowDescription && (
-                              <p 
-                                contentEditable
-                                suppressContentEditableWarning
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                                className={`${descFont.class} ${comp.heightMode === 'auto' ? '' : 'line-clamp-3'} leading-relaxed opacity-90 hover:bg-white/5 cursor-text px-1 rounded outline-none transition-colors`} 
-                                style={{ 
-                                  color: compTextColor,
-                                  textAlign: (comp.variant === 'icon' || comp.variant === 'standard') ? 'center' : 'left'
-                                }}
-                              >
-                                {comp.text}
-                              </p>
-                            )
-                          )}
+                          ) : comp.configShowDescription ? (
+                            <p contentEditable suppressContentEditableWarning
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onBlur={(e) => updateComponentField(comp.id, 'text', e.currentTarget.innerText)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
+                              style={{ fontFamily: 'var(--md-sys-typescale-body-medium-font)', fontSize: 'var(--md-sys-typescale-body-medium-size)', color: 'var(--md-sys-color-on-surface-variant)', lineHeight: 'var(--md-sys-typescale-body-medium-line-height)', outline: 'none', cursor: 'text' }}>
+                              {comp.text}
+                            </p>
+                          ) : null}
                         </M3Dialog>
                       )}
 
@@ -4328,6 +4329,26 @@ figma.ui.onmessage = (msg) => {
                         }
                       })()}
 
+                      {/* SPECIMEN: IMAGE */}
+                      {comp.type === 'image' && (
+                        <div style={{
+                          width: '100%', height: '100%',
+                          borderRadius: `${comp.borderRadius}px`,
+                          overflow: 'hidden',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: 'var(--md-sys-color-surface-variant)',
+                          position: 'relative',
+                        }}>
+                          {comp.iconImage ? (
+                            <img src={comp.iconImage} alt="component"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className="material-symbols-outlined" style={{ fontSize: 32, color: 'var(--md-sys-color-outline)', opacity: 0.4 }}>image</span>
+                          )}
+                        </div>
+                      )}
+
                       {/* SPECIMEN: PROGRESS */}
                       {comp.type === 'progress' && (
                         <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px',
@@ -4459,9 +4480,6 @@ figma.ui.onmessage = (msg) => {
             </div>
           )}
 
-            {/* =========================================================================================
-                FLOATING BOTTOM CONSOLE: MOTION TIMELINE CONTROLS AND EXPORTER PIPELINE
-                ==========================================================================*/}
             <div className="absolute bottom-0 left-0 right-0 h-20 z-40 bg-[#222222] border-t border-[#1C1C1C] px-8 flex items-center justify-between w-full text-neutral-100 select-none pointer-events-auto shadow-2xl">
               <div className="flex items-end justify-between w-full max-w-[1400px] mx-auto gap-2 overflow-x-auto">
 
@@ -4583,16 +4601,16 @@ figma.ui.onmessage = (msg) => {
                   ) : (
                     <button
                       onClick={handleDirectExport}
-                      className={`h-[28px] w-24 px-4 rounded-md font-sans text-[9.5px] font-bold uppercase tracking-wider shrink-0 flex items-center justify-center gap-1.5 cursor-pointer transition-all select-none border ${
-                        isAreaSelectionMode 
-                          ? 'bg-[#18A0FB]/15 border-[#18A0FB]/35 text-[#18A0FB] animate-pulse' 
-                          : 'bg-[#0ACF83]/15 hover:bg-[#0ACF83]/25 text-[#0ACF83] border-[#0ACF83]/20 shadow-xs'
+                      className={`h-[28px] px-3 rounded-md font-sans text-[9.5px] font-bold flex items-center justify-center gap-1.5 select-none transition-all cursor-pointer border ${
+                        isAreaSelectionMode
+                          ? 'bg-[#18A0FB]/15 border-[#18A0FB]/35 text-[#18A0FB] animate-pulse'
+                          : 'bg-[#0ACF83]/15 hover:bg-[#0ACF83]/25 text-[#0ACF83] border-[#0ACF83]/20 hover:border-[#0ACF83]/40'
                       }`}
                     >
+                      <span className="w-3 h-3 rounded-full border-2 border-current shrink-0 block" />
                       <span>{isAreaSelectionMode ? 'Selecting' : 'Capture'}</span>
                     </button>
                   )}
-                </div>
               </div>
             </div>
 
@@ -4601,13 +4619,13 @@ figma.ui.onmessage = (msg) => {
             <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 z-[90]">
               <button
                 onClick={() => { setIsCropActive(false); setIsAreaSelectionMode(false); }}
-                className="h-[28px] px-3.5 rounded-full bg-neutral-900/80 backdrop-blur-sm hover:bg-neutral-800 text-neutral-300 text-[9.5px] font-bold uppercase transition select-none cursor-pointer border border-neutral-700/50 shadow-lg"
+                className="h-8 px-4 rounded bg-[#3C3C3C] hover:bg-[#4A4A4A] text-white text-[11px] font-sans font-medium transition select-none cursor-pointer border border-[#555] shadow-md"
               >
                 Cancel
               </button>
               <button
                 onClick={startRecordingAfterCountdown}
-                className="h-[28px] px-4 rounded-full bg-[#18A0FB] hover:bg-[#158CDD] text-white text-[9.5px] font-bold uppercase tracking-wide transition select-none cursor-pointer border-none shadow-lg shadow-[#18A0FB]/30"
+                className="h-8 px-4 rounded bg-[#18A0FB] hover:bg-[#0D8DE3] text-white text-[11px] font-sans font-medium transition select-none cursor-pointer border-none shadow-md"
               >
                 Confirm
               </button>
@@ -4622,9 +4640,8 @@ figma.ui.onmessage = (msg) => {
                 recordingCountdown === 2 ? 'bg-orange-500 text-white' :
                 'bg-green-500 text-white'
               }`}>
-                <span className="font-black text-xl leading-none font-mono w-5 text-center">{recordingCountdown}</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest opacity-90">
-                  {recordingCountdown === 1 ? 'Go!' : 'Get ready...'}
+                <span className="font-black text-[10px] leading-none font-sans uppercase tracking-widest">
+                  {recordingCountdown === 1 ? 'Go!' : recordingCountdown === 2 ? 'Get ready...' : 'Starting...'}
                 </span>
               </div>
             </div>
@@ -5078,21 +5095,17 @@ figma.ui.onmessage = (msg) => {
                   <div className="space-y-1.5 pb-3 border-b border-[#333]">
                     <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Icon</span>
                     <div className="space-y-1.5">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search icons..."
-                          defaultValue=""
-                          id="icon-search-input"
-                          className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9.5px] text-neutral-100 focus:border-[#18A0FB] outline-none"
-                          onChange={(e) => {
-                            const val = e.target.value.toLowerCase().replace(/ /g,'_');
-                            const grid = document.getElementById('icon-grid-container');
-                            if (grid) grid.setAttribute('data-filter', val);
-                          }}
-                        />
-                      </div>
-                      <div id="icon-grid-container" className="grid grid-cols-5 gap-1 max-h-32 overflow-y-auto">
+                      <input
+                        type="text"
+                        placeholder="Search icons..."
+                        className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9.5px] text-neutral-100 focus:border-[#18A0FB] outline-none"
+                        onChange={(e) => {
+                          const val = e.target.value.toLowerCase().replace(/ /g,'_');
+                          const row = document.getElementById('icon-row-container');
+                          if (row) row.setAttribute('data-filter', val);
+                        }}
+                      />
+                      <div id="icon-row-container" className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
                         {['auto_awesome','volume_up','mic','play_arrow','favorite','bookmark','share','star','home','person','search','settings','notifications','mail','phone','camera','edit','delete','add','check','close','arrow_forward','arrow_back','expand_more','expand_less','refresh','download','upload','send','done','warning','error','info','help','lock','visibility','visibility_off','language','location_on','calendar_today','schedule','attach_file','link','image','video_file','music_note','palette','brush','flash_on','bolt','wb_sunny','dark_mode','cloud','wifi','bluetooth','battery_full','keyboard','mouse','smartphone','laptop','monitor','headphones','speaker','radio','tv','gamepad','toys','pets','nature','park','emoji_emotions','thumb_up','thumb_down','grade','workspace_premium','verified','security','admin_panel_settings','manage_accounts','group','groups','family_restroom','child_care','accessible','directions_run','fitness_center','sports','restaurant','local_cafe','shopping_cart','storefront','payments','credit_card','receipt','inventory','local_shipping','flight','hotel','map','explore','navigation','commute','electric_car','psychology','science','biotech','medical_services','monitor_heart'].map(icon => (
                           <button key={icon}
                             onClick={() => { updateActiveComponentField('activeIcon', icon); }}
@@ -5107,6 +5120,38 @@ figma.ui.onmessage = (msg) => {
                         ))}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* IMAGE UPLOAD (for image type) */}
+                {activeComp.type === 'image' && (
+                  <div className="space-y-1.5 pb-3 border-b border-[#333]">
+                    <span className="text-[9.5px] font-sans uppercase text-neutral-450 font-bold tracking-wider">Image Source</span>
+                    <div className="flex gap-1.5">
+                      <label htmlFor="image-comp-upload" className="flex-1 py-1.5 px-2 bg-[#2C2C2C] hover:bg-[#333] text-neutral-300 rounded text-[9px] font-bold uppercase cursor-pointer text-center border border-neutral-700/50 transition-colors">
+                        {activeComp.iconImage ? 'Replace' : 'Upload Image'}
+                      </label>
+                      <input type="file" accept="image/*" id="image-comp-upload" className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => updateActiveComponentField('iconImage', ev.target?.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      {activeComp.iconImage && (
+                        <button onClick={() => updateActiveComponentField('iconImage', undefined)}
+                          className="py-1.5 px-2 bg-red-950/25 hover:bg-red-900/30 text-red-400 rounded text-[9px] font-bold uppercase cursor-pointer border-none">
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {activeComp.iconImage && (
+                      <div className="rounded overflow-hidden h-20 bg-[#1E1E1E]">
+                        <img src={activeComp.iconImage} className="w-full h-full object-cover" alt="preview" />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -5176,16 +5221,31 @@ figma.ui.onmessage = (msg) => {
                               value={(activeComp as any)[textField] || defaultText}
                               onChange={(e) => updateActiveComponentField(textField as any, e.target.value)}
                               className="w-full bg-[#1A1A1A] border border-neutral-800 rounded px-2 py-1 text-[9px] text-neutral-100 focus:border-[#18A0FB] outline-none" />
-                            <select
-                              value={(activeComp as any)[variantField] || defaultVariant}
-                              onChange={(e) => updateActiveComponentField(variantField as any, e.target.value)}
-                              className="w-full bg-[#1A1A1A] text-neutral-200 border border-neutral-800 rounded px-1.5 py-1 text-[9px] focus:border-[#18A0FB] outline-none appearance-none cursor-pointer">
-                              <option value="filled">Filled</option>
-                              <option value="outlined">Outlined</option>
-                              <option value="tonal">Tonal</option>
-                              <option value="text">Text</option>
-                              <option value="elevated">Elevated</option>
-                            </select>
+                            <div className="relative">
+                              <select
+                                value={(activeComp as any)[variantField] || defaultVariant}
+                                onChange={(e) => updateActiveComponentField(variantField as any, e.target.value)}
+                                className="w-full bg-[#1A1A1A] text-neutral-200 border border-neutral-800 rounded px-1.5 pr-5 py-1 text-[9px] focus:border-[#18A0FB] outline-none appearance-none cursor-pointer">
+                                <option value="filled">Filled</option>
+                                <option value="outlined">Outlined</option>
+                                <option value="tonal">Tonal</option>
+                                <option value="text">Text</option>
+                                <option value="elevated">Elevated</option>
+                              </select>
+                              <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center"><ChevronDown className="w-3 h-3 text-neutral-500" /></div>
+                            </div>
+                            <div className="relative">
+                              <select
+                                value={(activeComp as any)[(isSecondary ? 'configSecondaryBtnSize' : 'configActionBtnSize')] || 's'}
+                                onChange={(e) => updateActiveComponentField((isSecondary ? 'configSecondaryBtnSize' : 'configActionBtnSize') as any, e.target.value)}
+                                className="w-full bg-[#1A1A1A] text-neutral-200 border border-neutral-800 rounded px-1.5 pr-5 py-1 text-[9px] focus:border-[#18A0FB] outline-none appearance-none cursor-pointer">
+                                <option value="xs">XS</option>
+                                <option value="s">S</option>
+                                <option value="m">M</option>
+                                <option value="l">L</option>
+                              </select>
+                              <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center"><ChevronDown className="w-3 h-3 text-neutral-500" /></div>
+                            </div>
                           </div>
                         );
                       })}
