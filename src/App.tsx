@@ -3130,6 +3130,13 @@ figma.ui.onmessage = (msg) => {
                 <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
                 <span>Progress</span>
               </button>
+              <button
+                onClick={() => handleAddNewComponent('image')}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded bg-[#1E1E1E] hover:bg-[#18A0FB] hover:text-white transition-colors text-[10px] font-sans text-neutral-300 select-none cursor-pointer border-none group"
+              >
+                <Plus className="w-3 h-3 text-[#18A0FB] group-hover:text-white" />
+                <span>Image</span>
+              </button>
             </div>
           </div>
 
